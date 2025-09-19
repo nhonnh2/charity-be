@@ -1,0 +1,44 @@
+### Test Refresh Token Implementation
+
+### 1. Register a new user
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### 2. Login with the user
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### 3. Use the refresh token to get new access token
+POST http://localhost:3000/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 4. Get user profile with access token
+GET http://localhost:3000/auth/profile
+Authorization: Bearer {{accessToken}}
+
+### 5. Logout (this will invalidate the refresh token)
+POST http://localhost:3000/auth/logout
+Authorization: Bearer {{accessToken}}
+
+### 6. Try to use the refresh token after logout (should fail)
+POST http://localhost:3000/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}

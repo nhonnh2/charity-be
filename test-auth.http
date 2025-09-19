@@ -1,0 +1,81 @@
+### Charity Backend Authentication Tests
+### Base URL
+@baseUrl = http://localhost:3000/api
+
+### Variables
+@email = test@example.com
+@password = Password123!
+@name = Test User
+
+###
+# Test 1: Health Check
+GET {{baseUrl}}/../
+
+###
+# Test 2: Register User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "{{name}}",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+# Test 3: Login User
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+# Test 4: Get Profile (Replace with actual token from login response)
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+###
+# Test 5: Login with Wrong Password
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "wrongpassword"
+}
+
+###
+# Test 6: Register with Existing Email
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Another User",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+# Test 7: Invalid Email Format
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "invalid-email",
+  "password": "{{password}}"
+}
+
+###
+# Test 8: Password Too Short
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "newemail@example.com",
+  "password": "123"
+} 
