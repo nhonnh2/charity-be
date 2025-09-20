@@ -5,7 +5,7 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User } from '../users/entities/user.entity';
-import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, GoogleOAuthDto, FacebookOAuthDto } from './dto';
+import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, GoogleOAuthDto, FacebookOAuthDto, LogoutDto } from './dto';
 import { UsersService } from '../users/users.service';
 import { GoogleOAuthService } from './google-oauth.service';
 import { FacebookOAuthService } from './facebook-oauth.service';
@@ -39,6 +39,7 @@ export class AuthService {
       $unset: { refreshToken: 1, refreshTokenExpiresAt: 1 },
     });
   }
+
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     const { name, email, password } = registerDto;
@@ -142,13 +143,13 @@ export class AuthService {
 
   async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<AuthResponseDto> {
     const { refreshToken } = refreshTokenDto;
-    console.log("refreshToken_____",refreshToken)
-    // Find user by refresh token
+    
+    // Find user by refresh token with expiration check
     const user = await this.userModel.findOne({
       refreshToken,
-      // refreshTokenExpiresAt: { $gt: new Date() },
+      refreshTokenExpiresAt: { $gt: new Date() },
     });
-    console.log("refreshToken_____user",user)
+    
     if (!user) {
       throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
     }
@@ -184,9 +185,14 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string): Promise<void> {
-    await this.clearRefreshToken(userId);
+  async logout(refreshToken: string): Promise<void> {
+    // Tìm user bằng refresh token và clear token
+    const user = await this.userModel.findOne({ refreshToken });
+    if (user) {
+      await this.clearRefreshToken(user._id.toString());
+    }
   }
+
 
   async validateUser(userId: string): Promise<User | null> {
     return this.userModel.findById(userId).select('-password').exec();

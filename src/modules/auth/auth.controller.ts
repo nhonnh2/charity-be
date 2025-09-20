@@ -1,7 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, GoogleOAuthDto, FacebookOAuthDto } from './dto';
+import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, GoogleOAuthDto, FacebookOAuthDto, LogoutDto } from './dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @ApiTags('Authentication')
@@ -57,20 +57,14 @@ export class AuthController {
   }
 
   @Post('logout')
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng xuất và vô hiệu hóa refresh token' })
   @ApiResponse({ 
     status: 200, 
     description: 'Đăng xuất thành công' 
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Token không hợp lệ' 
-  })
-  async logout(@Request() req) {
-    await this.authService.logout(req.user.id);
+  async logout(@Body() logoutDto: LogoutDto) {
+    await this.authService.logout(logoutDto.refreshToken);
     return { message: 'Đăng xuất thành công' };
   }
 
@@ -121,4 +115,5 @@ export class AuthController {
   async getProfile(@Request() req) {
     return req.user;
   }
+
 } 

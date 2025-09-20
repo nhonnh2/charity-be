@@ -31,9 +31,13 @@ Content-Type: application/json
 GET http://localhost:3000/auth/profile
 Authorization: Bearer {{accessToken}}
 
-### 5. Logout (this will invalidate the refresh token)
+### 5. Logout using refresh token (this will invalidate the refresh token)
 POST http://localhost:3000/auth/logout
-Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
 
 ### 6. Try to use the refresh token after logout (should fail)
 POST http://localhost:3000/auth/refresh
@@ -41,4 +45,20 @@ Content-Type: application/json
 
 {
   "refreshToken": "{{refreshToken}}"
+}
+
+### 7. Test logout when access token is expired (should work with refresh token)
+POST http://localhost:3000/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "expired_refresh_token_here"
+}
+
+### 8. Test with expired refresh token (should return 401)
+POST http://localhost:3000/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "invalid_or_expired_token_here"
 }
