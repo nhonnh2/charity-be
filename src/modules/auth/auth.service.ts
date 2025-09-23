@@ -276,6 +276,7 @@ export class AuthService {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
+          avatar: user.avatar,
           role: user.role,
           createdAt: user.createdAt,
         },
@@ -369,6 +370,7 @@ export class AuthService {
           name: user.name,
           email: user.email,
           role: user.role,
+          avatar: user.avatar,
           createdAt: user.createdAt,
         },
       };

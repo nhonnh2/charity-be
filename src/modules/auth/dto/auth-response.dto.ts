@@ -30,5 +30,6 @@ export class AuthResponseDto {
     email: string;
     role: string;
     createdAt: Date;
+    avatar?: string;
   };
 } 

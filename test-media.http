@@ -1,0 +1,228 @@
+### Test Media API Endpoints
+
+# Variables
+@baseUrl = http://localhost:3000
+@token = your-jwt-token-here
+
+### 1. Upload Media File (Image)
+POST {{baseUrl}}/media/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test-image.jpg"
+Content-Type: image/jpeg
+
+< ./test-image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="type"
+
+image
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+Test image upload
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tags"
+
+["test", "image"]
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="isPublic"
+
+false
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 2. Upload Media File (Document)
+POST {{baseUrl}}/media/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test-document.pdf"
+Content-Type: application/pdf
+
+< ./test-document.pdf
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="type"
+
+document
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+Test document upload
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="isPublic"
+
+true
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 3. Upload with Google Cloud Provider
+POST {{baseUrl}}/media/upload?provider=google_cloud
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test-image.jpg"
+Content-Type: image/jpeg
+
+< ./test-image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="type"
+
+image
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 4. Upload with Azure Blob Provider
+POST {{baseUrl}}/media/upload?provider=azure_blob
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test-video.mp4"
+Content-Type: video/mp4
+
+< ./test-video.mp4
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="type"
+
+video
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 5. Get Media List
+GET {{baseUrl}}/media?page=1&limit=10&type=image
+Authorization: Bearer {{token}}
+
+### 6. Get Media List with Search
+GET {{baseUrl}}/media?search=test&tags=image,profile
+Authorization: Bearer {{token}}
+
+### 7. Get Media List with Filters
+GET {{baseUrl}}/media?type=image&status=ready&isPublic=false&sortBy=createdAt&sortOrder=desc
+Authorization: Bearer {{token}}
+
+### 8. Get Public Media List (No Auth Required)
+GET {{baseUrl}}/media/public?type=image&limit=20
+
+### 9. Get Media by ID
+GET {{baseUrl}}/media/64f8b1234567890abcdef123
+Authorization: Bearer {{token}}
+
+### 10. Get Public Media by ID (No Auth Required)
+GET {{baseUrl}}/media/public/64f8b1234567890abcdef123
+
+### 11. Update Media
+PUT {{baseUrl}}/media/64f8b1234567890abcdef123
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tags": ["updated", "profile", "avatar"],
+  "description": "Updated profile picture description",
+  "altText": "Updated alt text for accessibility",
+  "isPublic": true
+}
+
+### 12. Get Download URL
+GET {{baseUrl}}/media/64f8b1234567890abcdef123/download?expires=3600
+Authorization: Bearer {{token}}
+
+### 13. Get Public Download URL (No Auth Required)
+GET {{baseUrl}}/media/public/64f8b1234567890abcdef123/download?expires=1800
+
+### 14. View Media (Redirect)
+GET {{baseUrl}}/media/64f8b1234567890abcdef123/view
+Authorization: Bearer {{token}}
+
+### 15. View Public Media (Redirect, No Auth Required)
+GET {{baseUrl}}/media/public/64f8b1234567890abcdef123/view
+
+### 16. Delete Media
+DELETE {{baseUrl}}/media/64f8b1234567890abcdef123
+Authorization: Bearer {{token}}
+
+### 17. Get Media Statistics
+GET {{baseUrl}}/media?sortBy=downloadCount&sortOrder=desc&limit=10
+Authorization: Bearer {{token}}
+
+### 18. Get Recent Media
+GET {{baseUrl}}/media?sortBy=createdAt&sortOrder=desc&limit=5
+Authorization: Bearer {{token}}
+
+### 19. Get Media by Provider
+GET {{baseUrl}}/media?provider=google_cloud
+Authorization: Bearer {{token}}
+
+### 20. Get Media by Status
+GET {{baseUrl}}/media?status=ready
+Authorization: Bearer {{token}}
+
+### Test Error Cases
+
+### 21. Upload Invalid File Type
+POST {{baseUrl}}/media/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+< ./test.txt
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="type"
+
+image
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 22. Upload File Too Large
+POST {{baseUrl}}/media/upload
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="large-file.jpg"
+Content-Type: image/jpeg
+
+< ./large-file.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="type"
+
+image
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 23. Get Non-existent Media
+GET {{baseUrl}}/media/000000000000000000000000
+Authorization: Bearer {{token}}
+
+### 24. Update Non-existent Media
+PUT {{baseUrl}}/media/000000000000000000000000
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "This should fail"
+}
+
+### 25. Delete Non-existent Media
+DELETE {{baseUrl}}/media/000000000000000000000000
+Authorization: Bearer {{token}}
+
+### 26. Access Private Media Without Auth
+GET {{baseUrl}}/media/64f8b1234567890abcdef123
+
+### 27. Upload Without Auth
+POST {{baseUrl}}/media/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test.jpg"
+Content-Type: image/jpeg
+
+< ./test.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="type"
+
+image
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+

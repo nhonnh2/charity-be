@@ -6,6 +6,7 @@ import { SharedModule } from '@shared/shared.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { MediaModule } from './modules/media/media.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -27,6 +28,7 @@ import { AppService } from './app.service';
     UsersModule,
     AuthModule,
     CampaignsModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
