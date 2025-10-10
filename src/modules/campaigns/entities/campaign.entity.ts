@@ -7,18 +7,27 @@ export interface Milestone {
   title: string;
   description: string;
   targetAmount: number;
-  dueDate: Date;
+  durationDays: number; // Thời gian dự kiến (số ngày)
   status: MilestoneStatus;
   startedAt?: Date;
-  completedAt?: Date;
+  dueDate?: Date; // Sẽ được set sau khi campaign được approve
+  completedAt?: Date; // Sẽ được update khi milestone hoàn thành
   verifiedAt?: Date;
   disbursedAmount?: number;
   actualSpending?: number;
   progressPercentage: number;
   progressUpdatesCount: number;
+  documents: FileObject[]; // Nhiều tài liệu cho kế hoạch
 }
 
-// Interface cho attachment
+// Interface cho file object (chứa cả id và url)
+export interface FileObject {
+  id: string;    // ID của file trong collection media
+  url: string;   // URL của file
+  name: string;   // Tên file
+}
+
+// Interface cho attachment (backward compatibility)
 export interface Attachment {
   fileName: string;
   fileUrl: string;
@@ -126,11 +135,11 @@ export class Campaign extends Document {
   @Prop({ type: Number, default: 0 })
   shareCount: number;
 
-  @Prop({ type: String, required: false })
-  image?: string;
+  @Prop({ type: Object, required: false })
+  coverImage?: FileObject; // Ảnh bìa đại diện cho chiến dịch
 
-  @Prop({ type: [String], default: [] })
-  gallery: string[];
+  @Prop({ type: [Object], default: [] })
+  gallery: FileObject[]; // Danh sách ảnh của chiến dịch
 
   // Metadata cho blockchain integration
   @Prop({ type: String, required: false })

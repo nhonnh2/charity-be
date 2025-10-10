@@ -1,10 +1,11 @@
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Campaign } from './entities/campaign.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateCampaignDto, UpdateCampaignDto, QueryCampaignsDto } from './dto';
-import { CampaignType, CampaignStatus, ReviewStatus } from '../../shared/enums';
+import { CampaignType, CampaignStatus, ReviewStatus, CampaignErrorCode } from '../../shared/enums';
+import { BusinessException } from '../../core/exceptions';
 
 @Injectable()
 export class CampaignsService {
@@ -17,7 +18,11 @@ export class CampaignsService {
     // Tìm thông tin creator
     const creator = await this.userModel.findById(userId);
     if (!creator) {
-      throw new NotFoundException('Không tìm thấy thông tin người tạo chiến dịch');
+      throw new BusinessException(
+        CampaignErrorCode.CREATOR_NOT_FOUND,
+        `Creator with ID ${userId} not found in database`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     // Validate business rules
@@ -36,9 +41,13 @@ export class CampaignsService {
       campaignData.milestones = [{
         title: 'Giải ngân toàn bộ',
         description: 'Giải ngân toàn bộ số tiền cho chiến dịch khẩn cấp',
-        targetAmount: createCampaignDto.targetAmount,
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        budget: createCampaignDto.targetAmount,
+        durationDays: 30, // 30 ngày cho emergency campaign
         status: 'pending',
+        progressPercentage: 0,
+        progressUpdatesCount: 0,
+        documents: [] // Không có tài liệu cho emergency campaign
+        // dueDate sẽ được set sau khi campaign được approve
       }] as any;
     }
 
@@ -121,7 +130,11 @@ export class CampaignsService {
 
   async findOne(id: string): Promise<Campaign> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('ID chiến dịch không hợp lệ');
+      throw new BusinessException(
+        CampaignErrorCode.NOT_FOUND,
+        `Invalid campaign ID format: ${id}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const campaign = await this.campaignModel
@@ -130,7 +143,11 @@ export class CampaignsService {
       .exec();
 
     if (!campaign) {
-      throw new NotFoundException('Không tìm thấy chiến dịch');
+      throw new BusinessException(
+        CampaignErrorCode.NOT_FOUND,
+        `Campaign with ID ${id} not found in database`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     // Tăng view count
@@ -146,13 +163,21 @@ export class CampaignsService {
     if (campaign.creatorId.toString() !== userId) {
       const user = await this.userModel.findById(userId);
       if (!user || user.role !== 'admin') {
-        throw new ForbiddenException('Bạn không có quyền chỉnh sửa chiến dịch này');
+        throw new BusinessException(
+          CampaignErrorCode.NOT_OWNER,
+          `User ${userId} is not the owner of campaign ${id}`,
+          HttpStatus.FORBIDDEN,
+        );
       }
     }
 
     // Không được update nếu campaign đã active hoặc completed
     if ([CampaignStatus.ACTIVE, CampaignStatus.COMPLETED].includes(campaign.status)) {
-      throw new BadRequestException('Không thể chỉnh sửa chiến dịch đã kích hoạt hoặc hoàn thành');
+      throw new BusinessException(
+        CampaignErrorCode.CANNOT_EDIT,
+        `Cannot edit campaign with status: ${campaign.status}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     // Update campaign
@@ -171,13 +196,21 @@ export class CampaignsService {
     if (campaign.creatorId.toString() !== userId) {
       const user = await this.userModel.findById(userId);
       if (!user || user.role !== 'admin') {
-        throw new ForbiddenException('Bạn không có quyền xóa chiến dịch này');
+        throw new BusinessException(
+          CampaignErrorCode.NOT_OWNER,
+          `User ${userId} is not the owner of campaign ${id}`,
+          HttpStatus.FORBIDDEN,
+        );
       }
     }
 
     // Không được xóa nếu có donation
     if (campaign.currentAmount > 0) {
-      throw new BadRequestException('Không thể xóa chiến dịch đã có quyên góp');
+      throw new BusinessException(
+        CampaignErrorCode.HAS_DONATIONS,
+        `Cannot delete campaign ${id} with existing donations (amount: ${campaign.currentAmount})`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     await this.campaignModel.findByIdAndDelete(id);
@@ -193,22 +226,43 @@ export class CampaignsService {
     // Validate emergency campaign reputation requirement
     if (dto.type === CampaignType.EMERGENCY) {
       if (creator.reputation < 60) {
-        throw new ForbiddenException(
-          `Tạo chiến dịch khẩn cấp yêu cầu uy tín tối thiểu 60 điểm. Uy tín hiện tại của bạn: ${creator.reputation}`
+        throw new BusinessException(
+          CampaignErrorCode.EMERGENCY_REPUTATION_TOO_LOW,
+          `Emergency campaign requires minimum 60 reputation. Current reputation: ${creator.reputation}`,
+          HttpStatus.FORBIDDEN,
         );
       }
 
       // Emergency campaign chỉ có 1 milestone
       if (dto.milestones && dto.milestones.length > 1) {
-        throw new BadRequestException('Chiến dịch khẩn cấp chỉ có thể có 1 giai đoạn giải ngân');
+        throw new BusinessException(
+          CampaignErrorCode.EMERGENCY_MULTIPLE_MILESTONES,
+          `Emergency campaign can only have 1 milestone, received: ${dto.milestones.length}`,
+          HttpStatus.BAD_REQUEST,
+        );
       }
     }
 
     // Validate milestone logic
     if (dto.milestones && dto.milestones.length > 0) {
-      const totalMilestoneAmount = dto.milestones.reduce((sum, milestone) => sum + milestone.targetAmount, 0);
+      const totalMilestoneAmount = dto.milestones.reduce((sum, milestone) => sum + milestone.budget, 0);
       if (totalMilestoneAmount !== dto.targetAmount) {
-        throw new BadRequestException('Tổng số tiền các milestone phải bằng mục tiêu của chiến dịch');
+        throw new BusinessException(
+          CampaignErrorCode.MILESTONE_BUDGET_MISMATCH,
+          `Total milestone budget (${totalMilestoneAmount}) must equal campaign target amount (${dto.targetAmount})`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // Validate duration days
+      for (const milestone of dto.milestones) {
+        if (milestone.durationDays < 1 || milestone.durationDays > 365) {
+          throw new BusinessException(
+            CampaignErrorCode.MILESTONE_DURATION_INVALID,
+            `Milestone duration must be between 1 and 365 days, received: ${milestone.durationDays}`,
+            HttpStatus.BAD_REQUEST,
+          );
+        }
       }
     }
 
@@ -217,7 +271,11 @@ export class CampaignsService {
       const start = new Date(dto.startDate);
       const end = new Date(dto.endDate);
       if (start >= end) {
-        throw new BadRequestException('Ngày bắt đầu phải trước ngày kết thúc');
+        throw new BusinessException(
+          CampaignErrorCode.END_DATE_BEFORE_START,
+          `Start date (${dto.startDate}) must be before end date (${dto.endDate})`,
+          HttpStatus.BAD_REQUEST,
+        );
       }
     }
 
@@ -229,8 +287,10 @@ export class CampaignsService {
 
     const maxActiveCampaigns = creator.reputation >= 80 ? 5 : creator.reputation >= 60 ? 3 : 2;
     if (activeCampaignsCount >= maxActiveCampaigns) {
-      throw new ForbiddenException(
-        `Bạn đã đạt giới hạn ${maxActiveCampaigns} chiến dịch đang hoạt động. Hãy hoàn thành các chiến dịch hiện tại trước khi tạo mới.`
+      throw new BusinessException(
+        CampaignErrorCode.ACTIVE_LIMIT_EXCEEDED,
+        `User has reached maximum of ${maxActiveCampaigns} active campaigns. Current active: ${activeCampaignsCount}. User reputation: ${creator.reputation}`,
+        HttpStatus.FORBIDDEN,
       );
     }
   }
@@ -240,12 +300,20 @@ export class CampaignsService {
     const campaign = await this.findOne(id);
     
     if (campaign.status !== CampaignStatus.PENDING_REVIEW) {
-      throw new BadRequestException('Chỉ có thể duyệt chiến dịch đang chờ duyệt');
+      throw new BusinessException(
+        CampaignErrorCode.CANNOT_EDIT,
+        `Can only approve campaigns with PENDING_REVIEW status. Current status: ${campaign.status}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const reviewer = await this.userModel.findById(reviewerId);
     if (!reviewer) {
-      throw new NotFoundException('Không tìm thấy thông tin người duyệt');
+      throw new BusinessException(
+        CampaignErrorCode.REVIEWER_NOT_FOUND,
+        `Reviewer with ID ${reviewerId} not found in database`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const updatedCampaign = await this.campaignModel.findByIdAndUpdate(
@@ -272,12 +340,20 @@ export class CampaignsService {
     const campaign = await this.findOne(id);
     
     if (campaign.status !== CampaignStatus.PENDING_REVIEW) {
-      throw new BadRequestException('Chỉ có thể từ chối chiến dịch đang chờ duyệt');
+      throw new BusinessException(
+        CampaignErrorCode.CANNOT_EDIT,
+        `Can only reject campaigns with PENDING_REVIEW status. Current status: ${campaign.status}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const reviewer = await this.userModel.findById(reviewerId);
     if (!reviewer) {
-      throw new NotFoundException('Không tìm thấy thông tin người duyệt');
+      throw new BusinessException(
+        CampaignErrorCode.REVIEWER_NOT_FOUND,
+        `Reviewer with ID ${reviewerId} not found in database`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const updatedCampaign = await this.campaignModel.findByIdAndUpdate(

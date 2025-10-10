@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, UnprocessableEntityException,ConflictException } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -9,6 +9,8 @@ import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, GoogleOAuthDto
 import { UsersService } from '../users/users.service';
 import { GoogleOAuthService } from './google-oauth.service';
 import { FacebookOAuthService } from './facebook-oauth.service';
+import { BusinessException } from '../../core/exceptions';
+import { AuthErrorCode, UserErrorCode } from '../../shared/enums/error-codes.enum';
 
 @Injectable()
 export class AuthService {
@@ -26,7 +28,7 @@ export class AuthService {
 
   private async saveRefreshToken(userId: string, refreshToken: string): Promise<void> {
     const refreshTokenExpiresAt = new Date();
-    refreshTokenExpiresAt.setMinutes(refreshTokenExpiresAt.getMinutes() + 30); // 30 minutes
+    refreshTokenExpiresAt.setMinutes(refreshTokenExpiresAt.getMinutes() + 180); // 30 minutes
 
     await this.userModel.findByIdAndUpdate(userId, {
       refreshToken,
@@ -47,7 +49,11 @@ export class AuthService {
     // Check if user already exists
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
-      throw new ConflictException('Email đã được sử dụng');
+      throw new BusinessException(
+        AuthErrorCode.EMAIL_ALREADY_EXISTS,
+        `User with email ${email} already exists`,
+        HttpStatus.CONFLICT,
+      );
     }
 
     // Hash password
@@ -94,23 +100,39 @@ export class AuthService {
     // Find user by email
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new UnprocessableEntityException('Email hoặc mật khẩu không chính xác');
+      throw new BusinessException(
+        AuthErrorCode.INVALID_CREDENTIALS,
+        `Invalid login credentials for email: ${email}`,
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     // Block password login for Google-linked accounts without password
     if (!user.password && user.googleProvider) {
-      throw new UnprocessableEntityException('Tài khoản này đăng nhập bằng Google. Vui lòng dùng Google Sign-in.');
+      throw new BusinessException(
+        AuthErrorCode.INVALID_CREDENTIALS,
+        `Account ${email} is linked with Google OAuth and has no password`,
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     // Check password
     const isPasswordValid = user.password ? await bcrypt.compare(password, user.password) : false;
     if (!isPasswordValid) {
-      throw new UnprocessableEntityException('Email hoặc mật khẩu không chính xác');
+      throw new BusinessException(
+        AuthErrorCode.INVALID_CREDENTIALS,
+        `Invalid password for email: ${email}`,
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     // Check if user is active
     if (user.status !== 'active') {
-      throw new UnprocessableEntityException('Tài khoản đã bị khóa');
+      throw new BusinessException(
+        UserErrorCode.BANNED,
+        `User account ${user._id} is not active. Status: ${user.status}`,
+        HttpStatus.FORBIDDEN,
+      );
     }
     // Update last login
     await this.userModel.findByIdAndUpdate(user._id, { 
@@ -151,12 +173,20 @@ export class AuthService {
     });
     
     if (!user) {
-      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
+      throw new BusinessException(
+        AuthErrorCode.INVALID_TOKEN,
+        `Invalid or expired refresh token`,
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     // Check if user is active
     if (user.status !== 'active') {
-      throw new UnauthorizedException('Tài khoản đã bị khóa');
+      throw new BusinessException(
+        UserErrorCode.BANNED,
+        `User account ${user._id} is not active. Status: ${user.status}`,
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     // Generate new tokens
@@ -248,7 +278,11 @@ export class AuthService {
 
       // Check if user is active
       if (user.status !== 'active') {
-        throw new UnauthorizedException('Tài khoản đã bị khóa');
+        throw new BusinessException(
+          UserErrorCode.BANNED,
+          `User account ${user._id} is not active. Status: ${user.status}`,
+          HttpStatus.FORBIDDEN,
+        );
       }
 
       // Update last login
@@ -282,11 +316,15 @@ export class AuthService {
         },
       };
     } catch (error) {
-      if (error instanceof UnauthorizedException) {
+      if (error instanceof BusinessException) {
         throw error;
       }
       console.error('Google OAuth error:', error);
-      throw new UnauthorizedException('Google OAuth authentication failed');
+      throw new BusinessException(
+        AuthErrorCode.OAUTH_FAILED,
+        `Google OAuth authentication failed: ${error.message}`,
+        HttpStatus.UNAUTHORIZED,
+      );
     }
   }
 
@@ -341,7 +379,11 @@ export class AuthService {
 
       // Check if user is active
       if (user.status !== 'active') {
-        throw new UnauthorizedException('Tài khoản đã bị khóa');
+        throw new BusinessException(
+          UserErrorCode.BANNED,
+          `User account ${user._id} is not active. Status: ${user.status}`,
+          HttpStatus.FORBIDDEN,
+        );
       }
 
       // Update last login
@@ -375,11 +417,15 @@ export class AuthService {
         },
       };
     } catch (error) {
-      if (error instanceof UnauthorizedException) {
+      if (error instanceof BusinessException) {
         throw error;
       }
       console.error('Facebook OAuth error:', error);
-      throw new UnauthorizedException('Facebook OAuth authentication failed');
+      throw new BusinessException(
+        AuthErrorCode.OAUTH_FAILED,
+        `Facebook OAuth authentication failed: ${error.message}`,
+        HttpStatus.UNAUTHORIZED,
+      );
     }
   }
 } 

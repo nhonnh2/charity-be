@@ -39,6 +39,24 @@ export class AzureBlobStorageService implements CloudStorageService {
     this.logger.log(`Azure Blob Storage initialized with container: ${this.containerName}`);
   }
 
+  /**
+   * Sanitize metadata values to be safe for HTTP headers
+   * Azure Blob metadata values must be ASCII and cannot contain certain characters
+   */
+  private sanitizeMetadataValue(value: string): string {
+    if (!value) return '';
+    
+    // Convert to ASCII by removing non-ASCII characters
+    // Azure Blob metadata must be ASCII-only
+    return value
+      .normalize('NFD') // Normalize unicode
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/[^\x00-\x7F]/g, '') // Remove non-ASCII characters
+      .replace(/[\r\n\t]/g, ' ') // Replace line breaks and tabs with spaces
+      .replace(/["'\\]/g, '') // Remove quotes and backslashes that can cause issues
+      .trim();
+  }
+
   async uploadFile(
     file: Express.Multer.File,
     path: string,
@@ -48,15 +66,24 @@ export class AzureBlobStorageService implements CloudStorageService {
       const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
       const blockBlobClient = containerClient.getBlockBlobClient(path);
 
+      // Sanitize metadata values for Azure Blob Storage headers
+      const sanitizedOriginalName = this.sanitizeMetadataValue(file.originalname);
+      const sanitizedMetadata: Record<string, string> = {};
+      if (options.metadata) {
+        for (const [key, value] of Object.entries(options.metadata)) {
+          sanitizedMetadata[key] = this.sanitizeMetadataValue(String(value));
+        }
+      }
+
       const uploadOptions: any = {
         blobHTTPHeaders: {
           blobContentType: options.contentType || file.mimetype,
           blobCacheControl: options.cacheControl,
         },
         metadata: {
-          originalName: file.originalname,
+          originalName: sanitizedOriginalName,
           uploadedAt: new Date().toISOString(),
-          ...options.metadata,
+          ...sanitizedMetadata,
         },
       };
 

@@ -1,9 +1,7 @@
 import {
   Injectable,
-  NotFoundException,
-  BadRequestException,
+  HttpStatus,
   Logger,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -13,6 +11,8 @@ import { UploadMediaDto, QueryMediaDto, UpdateMediaDto } from './dto';
 import { GoogleCloudStorageService } from '@shared/services/google-cloud-storage.service';
 import { AzureBlobStorageService } from '@shared/services/azure-blob-storage.service';
 import { MediaProcessorService } from '@shared/services/media-processor.service';
+import { BusinessException } from '../../core/exceptions';
+import { MediaErrorCode } from '../../shared/enums/error-codes.enum';
 
 @Injectable()
 export class MediaService {
@@ -36,7 +36,11 @@ export class MediaService {
       case MediaProvider.AZURE_BLOB:
         return this.azureBlobService;
       default:
-        throw new BadRequestException(`Unsupported cloud provider: ${provider}`);
+        throw new BusinessException(
+          MediaErrorCode.UPLOAD_FAILED,
+          `Unsupported cloud provider: ${provider}`,
+          HttpStatus.BAD_REQUEST,
+        );
     }
   }
 
@@ -53,21 +57,58 @@ export class MediaService {
     
     const fileId = new Types.ObjectId().toString();
     const extension = originalName.split('.').pop();
-    const filename = `${fileId}_${originalName}`;
+    
+    // Sanitize original filename: remove special characters, limit length
+    const sanitizedName = this.sanitizeFilename(originalName, extension);
+    const filename = `${fileId}_${sanitizedName}`;
     
     return `media/${provider}/${type}s/${year}/${month}/${day}/${filename}`;
+  }
+
+  private sanitizeFilename(originalName: string, extension: string): string {
+    // Remove extension from original name
+    const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+    
+    // Replace special characters and spaces with underscore
+    // Keep only alphanumeric, underscore, and hyphen
+    let sanitized = nameWithoutExt
+      .normalize('NFD') // Normalize unicode characters
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace special chars with underscore
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .replace(/^_+|_+$/g, ''); // Trim underscores from start/end
+    
+    // Limit filename length (max 100 chars for the base name)
+    if (sanitized.length > 100) {
+      sanitized = sanitized.substring(0, 100);
+    }
+    
+    // If sanitized name is empty, use a default name
+    if (!sanitized) {
+      sanitized = 'file';
+    }
+    
+    return `${sanitized}.${extension}`;
   }
 
   private validateFile(file: Express.Multer.File, type: MediaType): void {
     const maxSize = this.configService.get<number>(`MAX_${type.toUpperCase()}_SIZE`, 10 * 1024 * 1024); // 10MB default
     
     if (file.size > maxSize) {
-      throw new BadRequestException(`File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`);
+      throw new BusinessException(
+        MediaErrorCode.FILE_TOO_LARGE,
+        `File size ${file.size} bytes exceeds maximum allowed size of ${maxSize} bytes (${maxSize / 1024 / 1024}MB)`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const allowedMimeTypes = this.getAllowedMimeTypes(type);
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(`File type ${file.mimetype} is not allowed for ${type}`);
+      throw new BusinessException(
+        MediaErrorCode.INVALID_FILE_TYPE,
+        `File type ${file.mimetype} is not allowed for ${type}. Allowed types: ${allowedMimeTypes.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -134,7 +175,11 @@ export class MediaService {
           // Validate image
           const isValid = await this.mediaProcessorService.validateImage(file.buffer);
           if (!isValid) {
-            throw new BadRequestException('Invalid image file');
+            throw new BusinessException(
+              MediaErrorCode.PROCESSING_FAILED,
+              `Invalid image file: failed validation check`,
+              HttpStatus.BAD_REQUEST,
+            );
           }
 
           // Get image metadata
@@ -241,7 +286,11 @@ export class MediaService {
 
     const media = await this.mediaModel.findOne(query);
     if (!media) {
-      throw new NotFoundException('Media not found');
+      throw new BusinessException(
+        MediaErrorCode.NOT_FOUND,
+        `Media with ID ${mediaId} not found or access denied`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     // Increment view count
@@ -318,7 +367,11 @@ export class MediaService {
     });
 
     if (!media) {
-      throw new NotFoundException('Media not found or access denied');
+      throw new BusinessException(
+        MediaErrorCode.NOT_FOUND,
+        `Media with ID ${mediaId} not found or user ${userId} does not have access`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     // Update fields
@@ -338,7 +391,11 @@ export class MediaService {
     });
 
     if (!media) {
-      throw new NotFoundException('Media not found or access denied');
+      throw new BusinessException(
+        MediaErrorCode.NOT_FOUND,
+        `Media with ID ${mediaId} not found or user ${userId} does not have access`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     try {
