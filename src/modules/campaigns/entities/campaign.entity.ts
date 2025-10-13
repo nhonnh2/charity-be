@@ -114,6 +114,9 @@ export class Campaign extends Document {
   @Prop({ required: false })
   endDate?: Date;
 
+  @Prop({ type: Number, required: false, min: 1, max: 365 })
+  fundraisingDays?: number; // Số ngày kêu gọi quyên góp
+
   @Prop({ required: false })
   approvedAt?: Date;
 

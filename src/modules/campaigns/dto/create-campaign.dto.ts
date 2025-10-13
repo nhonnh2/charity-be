@@ -187,6 +187,18 @@ export class CreateCampaignDto {
   endDate?: string;
 
   @ApiPropertyOptional({
+    description: 'Số ngày kêu gọi quyên góp (nếu cung cấp sẽ tính endDate = startDate + số ngày)',
+    example: 90,
+    minimum: 1,
+    maximum: 365
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(365)
+  fundraisingDays?: number;
+
+  @ApiPropertyOptional({
     description: 'Các giai đoạn thực hiện chiến dịch',
     type: [MilestoneDto]
   })

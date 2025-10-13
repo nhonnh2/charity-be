@@ -331,6 +331,12 @@ export class CampaignResponseDto {
   endDate?: Date;
 
   @ApiPropertyOptional({
+    description: 'Số ngày kêu gọi quyên góp',
+    example: 90
+  })
+  fundraisingDays?: number;
+
+  @ApiPropertyOptional({
     description: 'Ngày duyệt',
     example: '2024-01-20T10:00:00.000Z'
   })

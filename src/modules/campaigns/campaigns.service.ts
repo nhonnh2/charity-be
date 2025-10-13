@@ -29,12 +29,13 @@ export class CampaignsService {
     await this.validateCampaignCreation(createCampaignDto, creator);
 
     // Tạo campaign data
-    const campaignData = {
+    const campaignData: any = {
       ...createCampaignDto,
       creatorId: new Types.ObjectId(userId),
       creatorName: creator.name,
       status: CampaignStatus.PENDING_REVIEW,
     };
+
 
     // Xử lý milestones cho emergency campaign (chỉ 1 giai đoạn)
     if (createCampaignDto.type === CampaignType.EMERGENCY) {

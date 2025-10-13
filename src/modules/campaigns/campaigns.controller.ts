@@ -88,11 +88,7 @@ export class CampaignsController {
   })
   async create(@Body() createCampaignDto: CreateCampaignDto, @Request() req) {
     const campaign = await this.campaignsService.create(createCampaignDto, req.user.id);
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Chiến dịch đã được tạo thành công',
-      data: campaign,
-    };
+    return campaign; // Let TransformInterceptor handle the response structure
   }
 
   @Get()
@@ -123,11 +119,7 @@ export class CampaignsController {
   @ApiQuery({ name: 'tag', required: false, description: 'Tag để lọc', example: 'trẻ em' })
   async findAll(@Query() queryDto: QueryCampaignsDto) {
     const result = await this.campaignsService.findAll(queryDto);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Lấy danh sách chiến dịch thành công',
-      ...result,
-    };
+    return result; // Let TransformInterceptor handle the response structure
   }
 
   @Get('for-review')
@@ -149,11 +141,7 @@ export class CampaignsController {
   })
   async getCampaignsForReview(@Query('limit') limit?: number) {
     const campaigns = await this.campaignsService.getCampaignsForReview(limit);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Lấy danh sách chiến dịch cần duyệt thành công',
-      data: campaigns,
-    };
+    return campaigns; // Let TransformInterceptor handle the response structure
   }
 
   @Get('my-campaigns')
@@ -175,11 +163,7 @@ export class CampaignsController {
   async getMyCampaigns(@Request() req, @Query() queryDto: QueryCampaignsDto) {
     const modifiedQuery = { ...queryDto, creatorId: req.user.id };
     const result = await this.campaignsService.findAll(modifiedQuery);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Lấy danh sách chiến dịch của bạn thành công',
-      ...result,
-    };
+    return result; // Let TransformInterceptor handle the response structure
   }
 
   @Get(':id')
@@ -217,11 +201,7 @@ export class CampaignsController {
   })
   async findOne(@Param('id') id: string) {
     const campaign = await this.campaignsService.findOne(id);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Lấy chi tiết chiến dịch thành công',
-      data: campaign,
-    };
+    return campaign; // Let TransformInterceptor handle the response structure
   }
 
   @Patch(':id')
@@ -281,11 +261,7 @@ export class CampaignsController {
     @Request() req,
   ) {
     const campaign = await this.campaignsService.update(id, updateCampaignDto, req.user.id);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Cập nhật chiến dịch thành công',
-      data: campaign,
-    };
+    return campaign; // Let TransformInterceptor handle the response structure
   }
 
   @Delete(':id')
@@ -345,10 +321,7 @@ export class CampaignsController {
   })
   async remove(@Param('id') id: string, @Request() req) {
     await this.campaignsService.remove(id, req.user.id);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Xóa chiến dịch thành công',
-    };
+    return { success: true }; // Let TransformInterceptor handle the response structure
   }
 
   // Review Management Endpoints
@@ -413,11 +386,7 @@ export class CampaignsController {
     @Request() req,
   ) {
     const campaign = await this.campaignsService.approveCampaign(id, req.user.id, comments);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Duyệt chiến dịch thành công',
-      data: campaign,
-    };
+    return campaign; // Let TransformInterceptor handle the response structure
   }
 
   @Put(':id/reject')
@@ -482,11 +451,7 @@ export class CampaignsController {
     @Request() req,
   ) {
     const campaign = await this.campaignsService.rejectCampaign(id, req.user.id, reason);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Từ chối chiến dịch thành công',
-      data: campaign,
-    };
+    return campaign; // Let TransformInterceptor handle the response structure
   }
 
   // Statistics endpoints
@@ -513,16 +478,12 @@ export class CampaignsController {
   async getOverviewStats() {
     // TODO: Implement campaign statistics
     return {
-      statusCode: HttpStatus.OK,
-      message: 'Lấy thống kê thành công',
-      data: {
-        totalCampaigns: 0,
-        activeCampaigns: 0,
-        completedCampaigns: 0,
-        totalFundsRaised: 0,
-        pendingReview: 0,
-      },
-    };
+      totalCampaigns: 0,
+      activeCampaigns: 0,
+      completedCampaigns: 0,
+      totalFundsRaised: 0,
+      pendingReview: 0,
+    }; // Let TransformInterceptor handle the response structure
   }
 
   @Get('categories/list')
@@ -567,10 +528,6 @@ export class CampaignsController {
       'Khác',
     ];
 
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Lấy danh sách categories thành công',
-      data: categories,
-    };
+    return categories; // Let TransformInterceptor handle the response structure
   }
 } 

@@ -24,14 +24,40 @@ export class TransformInterceptor<T>
   ): Observable<Response<T>> {
     const ctx = context.switchToHttp();
     const response = ctx.getResponse();
+    const request = ctx.getRequest();
     
     return next.handle().pipe(
-      map((data) => ({
-        data,
-        statusCode: response.statusCode,
-        message: 'Success',
-        timestamp: new Date().toISOString(),
-      })),
+      map((data) => {
+        // Determine appropriate message based on HTTP method and status code
+        const message = this.getSuccessMessage(request.method, response.statusCode);
+        
+        return {
+          data,
+          statusCode: response.statusCode,
+          message,
+          timestamp: new Date().toISOString(),
+        };
+      }),
     );
+  }
+
+  private getSuccessMessage(method: string, statusCode: number): string {
+    switch (method) {
+      case 'POST':
+        switch (statusCode) {
+          case 201:
+            return 'Tạo thành công';
+          default:
+            return 'Thành công';
+        }
+      case 'PUT':
+      case 'PATCH':
+        return 'Cập nhật thành công';
+      case 'DELETE':
+        return 'Xóa thành công';
+      case 'GET':
+      default:
+        return 'Lấy dữ liệu thành công';
+    }
   }
 } 
