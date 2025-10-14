@@ -39,17 +39,31 @@ export class CampaignsService {
 
     // Xử lý milestones cho emergency campaign (chỉ 1 giai đoạn)
     if (createCampaignDto.type === CampaignType.EMERGENCY) {
-      campaignData.milestones = [{
-        title: 'Giải ngân toàn bộ',
-        description: 'Giải ngân toàn bộ số tiền cho chiến dịch khẩn cấp',
-        budget: createCampaignDto.targetAmount,
-        durationDays: 30, // 30 ngày cho emergency campaign
-        status: 'pending',
-        progressPercentage: 0,
-        progressUpdatesCount: 0,
-        documents: [] // Không có tài liệu cho emergency campaign
-        // dueDate sẽ được set sau khi campaign được approve
-      }] as any;
+      // Sử dụng milestone data từ request body nếu có, nếu không thì tạo default
+      if (createCampaignDto.milestones && createCampaignDto.milestones.length > 0) {
+        campaignData.milestones = createCampaignDto.milestones.map(milestone => ({
+          title: milestone.title,
+          description: milestone.description,
+          budget: milestone.budget,
+          durationDays: milestone.durationDays,
+          status: 'pending',
+          progressPercentage: 0,
+          progressUpdatesCount: 0,
+          documents: milestone.documents || []
+        }));
+      } else {
+        // Fallback nếu không có milestone data
+        campaignData.milestones = [{
+          title: 'Giải ngân toàn bộ',
+          description: 'Giải ngân toàn bộ số tiền cho chiến dịch khẩn cấp',
+          budget: createCampaignDto.targetAmount,
+          durationDays: 30, // 30 ngày cho emergency campaign
+          status: 'pending',
+          progressPercentage: 0,
+          progressUpdatesCount: 0,
+          documents: []
+        }] as any;
+      }
     }
 
     const campaign = new this.campaignModel(campaignData);

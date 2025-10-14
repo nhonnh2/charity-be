@@ -43,11 +43,11 @@ export class MilestoneDto {
   @ApiProperty({
     description: 'Mô tả chi tiết giai đoạn',
     example: 'Xây dựng trường học 2 tầng với 8 phòng học',
-    maxLength: 500
+    maxLength: 20000
   })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(500)
+  @MaxLength(20000)
   description: string;
 
   @ApiProperty({
