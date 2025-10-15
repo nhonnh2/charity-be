@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { CampaignType, FundingType, CampaignStatus, ReviewStatus, MilestoneStatus } from '../../../shared/enums';
+import { CampaignType, FundingType, CampaignStatus, ReviewStatus, MilestoneStatus, CampaignCategory } from '../../../shared/enums';
 
 // Interface cho milestone
 export interface Milestone {
@@ -93,8 +93,12 @@ export class Campaign extends Document {
   @Prop({ type: Number, required: true, min: 0 })
   reviewFee: number; // Phí duyệt để thu hút reviewer
 
-  @Prop({ required: false, trim: true })
-  category?: string;
+  @Prop({ 
+    type: String, 
+    enum: Object.values(CampaignCategory),
+    required: false 
+  })
+  category?: CampaignCategory;
 
   @Prop({ type: [String], default: [] })
   tags: string[];

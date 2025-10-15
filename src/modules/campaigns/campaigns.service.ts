@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Campaign } from './entities/campaign.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateCampaignDto, UpdateCampaignDto, QueryCampaignsDto } from './dto';
-import { CampaignType, CampaignStatus, ReviewStatus, CampaignErrorCode } from '../../shared/enums';
+import { CampaignType, CampaignStatus, ReviewStatus, CampaignErrorCode, CampaignCategory } from '../../shared/enums';
 import { BusinessException } from '../../core/exceptions';
 
 @Injectable()
@@ -119,21 +119,52 @@ export class CampaignsService {
     const sort: any = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Execute query với pagination
+    // Execute query với pagination - chỉ select những field cần thiết
     const skip = (page - 1) * limit;
     const [campaigns, total] = await Promise.all([
       this.campaignModel
         .find(query)
+        .select('_id title description coverImage status category currentAmount donorCount milestones startDate endDate viewCount isFeatured createdAt')
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .populate('creatorId', 'name email reputation')
         .exec(),
       this.campaignModel.countDocuments(query)
     ]);
 
+    // Transform campaigns to list format with calculated metrics
+    const transformedCampaigns = campaigns.map(campaign => {
+      // Calculate completed milestones
+      const completedMilestones = campaign.milestones?.filter(m => m.status === 'completed').length || 0;
+      const totalMilestones = campaign.milestones?.length || 0;
+      
+      // Calculate spent amount (sum of actualSpending from completed milestones)
+      const spentAmount = campaign.milestones?.reduce((sum, milestone) => {
+        return sum + (milestone.actualSpending || 0);
+      }, 0) || 0;
+
+      return {
+        _id: campaign._id,
+        title: campaign.title,
+        description: campaign.description,
+        coverImage: campaign.coverImage,
+        status: campaign.status,
+        category: campaign.category,
+        interestedCount: campaign.donorCount || 0, // Using donorCount as interested people
+        donatedAmount: campaign.currentAmount || 0,
+        completedMilestones,
+        totalMilestones,
+        spentAmount,
+        createdAt: campaign.createdAt,
+        startDate: campaign.startDate,
+        endDate: campaign.endDate,
+        viewCount: campaign.viewCount || 0,
+        isFeatured: campaign.isFeatured || false
+      };
+    });
+
     return {
-      data: campaigns,
+      items: transformedCampaigns,
       pagination: {
         current: page,
         pageSize: limit,

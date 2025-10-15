@@ -1,7 +1,7 @@
 import { IsString, IsNotEmpty, IsEnum, IsNumber, IsOptional, IsArray, IsDateString, Min, Max, MaxLength, ValidateIf, IsUUID } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CampaignType, FundingType } from '../../../shared/enums';
+import { CampaignType, FundingType, CampaignCategory } from '../../../shared/enums';
 
 export class FileObjectDto {
   @ApiProperty({
@@ -151,14 +151,13 @@ export class CreateCampaignDto {
   reviewFee: number;
 
   @ApiPropertyOptional({
-    description: 'Danh mục chiến dịch (key)',
-    example: 'education',
-    maxLength: 50
+    description: 'Danh mục chiến dịch (keyword)',
+    enum: CampaignCategory,
+    example: CampaignCategory.EDUCATION
   })
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  category?: string;
+  @IsEnum(CampaignCategory)
+  category?: CampaignCategory;
 
   @ApiPropertyOptional({
     description: 'Tags để phân loại chiến dịch',

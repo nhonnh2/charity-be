@@ -33,7 +33,7 @@ import {
   CampaignStatsResponseDto
 } from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CampaignType, FundingType, CampaignStatus } from '../../shared/enums';
+import { CampaignType, FundingType, CampaignStatus, CampaignCategory, CATEGORY_METADATA, getAllCategoryKeywords } from '../../shared/enums';
 
 @ApiTags('campaigns')
 @Controller('campaigns')
@@ -107,7 +107,7 @@ export class CampaignsController {
   @ApiQuery({ name: 'type', required: false, enum: CampaignType, description: 'Loại chiến dịch' })
   @ApiQuery({ name: 'fundingType', required: false, enum: FundingType, description: 'Loại quyên góp' })
   @ApiQuery({ name: 'status', required: false, enum: CampaignStatus, description: 'Trạng thái chiến dịch' })
-  @ApiQuery({ name: 'category', required: false, description: 'Lọc theo category', example: 'Giáo dục' })
+  @ApiQuery({ name: 'category', required: false, description: 'Lọc theo category keyword', example: 'education' })
   @ApiQuery({ name: 'creatorId', required: false, description: 'Lọc theo creator ID', example: '507f1f77bcf86cd799439011' })
   @ApiQuery({ name: 'isFeatured', required: false, description: 'Lọc chiến dịch nổi bật', example: true })
   @ApiQuery({ name: 'minTargetAmount', required: false, description: 'Số tiền mục tiêu tối thiểu (VND)', example: 1000000 })
@@ -489,44 +489,39 @@ export class CampaignsController {
   @Get('categories/list')
   @ApiOperation({ 
     summary: 'Lấy danh sách categories',
-    description: 'Lấy danh sách các danh mục chiến dịch có sẵn trong hệ thống'
+    description: 'Lấy danh sách các danh mục chiến dịch có sẵn trong hệ thống với keyword và metadata'
   })
   @ApiResponse({ 
     status: 200, 
-    description: 'Danh sách categories',
+    description: 'Danh sách categories với metadata',
     schema: {
       example: {
         statusCode: 200,
         message: 'Lấy danh sách categories thành công',
         data: [
-          'Giáo dục',
-          'Y tế',
-          'Thiên tai',
-          'Nghèo đói',
-          'Môi trường',
-          'Trẻ em',
-          'Người cao tuổi',
-          'Người khuyết tật',
-          'Động vật',
-          'Khác'
+          {
+            keyword: 'education',
+            displayName: 'Giáo dục',
+            description: 'Các chiến dịch liên quan đến giáo dục và học tập',
+            icon: 'school',
+            color: '#4CAF50'
+          },
+          {
+            keyword: 'healthcare',
+            displayName: 'Y tế',
+            description: 'Các chiến dịch liên quan đến chăm sóc sức khỏe',
+            icon: 'medical',
+            color: '#F44336'
+          }
         ]
       }
     }
   })
   async getCategories() {
-    // TODO: Implement dynamic categories from database
-    const categories = [
-      'Giáo dục',
-      'Y tế',
-      'Thiên tai',
-      'Nghèo đói',
-      'Môi trường',
-      'Trẻ em',
-      'Người cao tuổi',
-      'Người khuyết tật',
-      'Động vật',
-      'Khác',
-    ];
+    // Return all categories with metadata for client localization
+    const categories = Object.values(CampaignCategory).map(keyword => 
+      CATEGORY_METADATA[keyword]
+    );
 
     return categories; // Let TransformInterceptor handle the response structure
   }

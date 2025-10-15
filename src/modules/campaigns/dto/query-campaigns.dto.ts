@@ -1,7 +1,7 @@
 import { IsOptional, IsEnum, IsString, IsNumber, Min, Max, IsDateString, IsBoolean } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { CampaignType, FundingType, CampaignStatus } from '../../../shared/enums';
+import { CampaignType, FundingType, CampaignStatus, CampaignCategory } from '../../../shared/enums';
 
 export class QueryCampaignsDto {
   @ApiPropertyOptional({
@@ -66,12 +66,13 @@ export class QueryCampaignsDto {
   status?: CampaignStatus;
 
   @ApiPropertyOptional({
-    description: 'Danh mục chiến dịch',
-    example: 'Giáo dục'
+    description: 'Danh mục chiến dịch (keyword)',
+    enum: CampaignCategory,
+    example: CampaignCategory.EDUCATION
   })
   @IsOptional()
-  @IsString()
-  category?: string;
+  @IsEnum(CampaignCategory)
+  category?: CampaignCategory;
 
   @ApiPropertyOptional({
     description: 'ID của người tạo chiến dịch',
