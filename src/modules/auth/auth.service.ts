@@ -5,7 +5,7 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User } from '../users/entities/user.entity';
-import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, GoogleOAuthDto, FacebookOAuthDto, LogoutDto } from './dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, GoogleOAuthDto, FacebookOAuthDto, LogoutDto } from './dto';
 import { UsersService } from '../users/users.service';
 import { GoogleOAuthService } from './google-oauth.service';
 import { FacebookOAuthService } from './facebook-oauth.service';
@@ -43,7 +43,7 @@ export class AuthService {
   }
 
 
-  async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
+  async register(registerDto: RegisterDto) {
     const { name, email, password } = registerDto;
 
     // Check if user already exists
@@ -83,18 +83,21 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      csrfToken:crypto.randomBytes(64).toString('hex'),
+      expiresIn: 7200, // 2 hours
       user: {
         id: savedUser._id.toString(),
-        name: savedUser.name,
         email: savedUser.email,
+        name: savedUser.name,
+        avatar: savedUser.avatar,
         role: savedUser.role,
+        isEmailVerified: savedUser.isVerified,
         createdAt: savedUser.createdAt,
+        updatedAt: savedUser.updatedAt,
       },
     };
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
+  async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
     // Find user by email
@@ -138,6 +141,7 @@ export class AuthService {
     await this.userModel.findByIdAndUpdate(user._id, { 
       lastLoginAt: new Date() 
     });
+    
     // Generate tokens
     const payload = { 
       sub: user._id.toString(), 
@@ -146,24 +150,27 @@ export class AuthService {
     };
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.generateRefreshToken();
-    //Save refresh token
+    // Save refresh token
     await this.saveRefreshToken(user._id.toString(), refreshToken);
 
     return {
       accessToken,
       refreshToken,
-      csrfToken:crypto.randomBytes(64).toString('hex'),
+      expiresIn: 7200, // 2 hours
       user: {
         id: user._id.toString(),
-        name: user.name,
         email: user.email,
+        name: user.name,
+        avatar: user.avatar,
         role: user.role,
+        isEmailVerified: user.isVerified,
         createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     };
   }
 
-  async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<AuthResponseDto> {
+  async refreshToken(refreshTokenDto: RefreshTokenDto) {
     const { refreshToken } = refreshTokenDto;
     
     // Find user by refresh token with expiration check
@@ -204,23 +211,27 @@ export class AuthService {
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
-      csrfToken:crypto.randomBytes(64).toString('hex'),
+      expiresIn: 7200, // 2 hours
       user: {
         id: user._id.toString(),
-        name: user.name,
         email: user.email,
+        name: user.name,
+        avatar: user.avatar,
         role: user.role,
+        isEmailVerified: user.isVerified,
         createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     };
   }
 
-  async logout(refreshToken: string): Promise<void> {
-    // Tìm user bằng refresh token và clear token
+  async logout(refreshToken: string) {
+    // Find user by refresh token and clear token
     const user = await this.userModel.findOne({ refreshToken });
     if (user) {
       await this.clearRefreshToken(user._id.toString());
     }
+    return { message: 'Đăng xuất thành công' };
   }
 
 
@@ -228,9 +239,8 @@ export class AuthService {
     return this.userModel.findById(userId).select('-password').exec();
   }
 
-  async googleOAuth(googleOAuthDto: GoogleOAuthDto): Promise<AuthResponseDto> {
+  async googleOAuth(googleOAuthDto: GoogleOAuthDto) {
     const { idToken, nonce } = googleOAuthDto;
-    console.log("googleOAuth___",idToken,nonce)
     try {
       // Verify Google ID token
       const googleUserInfo = await this.googleOAuthService.getGoogleUserInfo(idToken, nonce);
@@ -305,14 +315,16 @@ export class AuthService {
       return {
         accessToken,
         refreshToken,
-        csrfToken: crypto.randomBytes(64).toString('hex'),
+        expiresIn: 7200, // 2 hours
         user: {
           id: user._id.toString(),
-          name: user.name,
           email: user.email,
+          name: user.name,
           avatar: user.avatar,
           role: user.role,
+          isEmailVerified: user.isVerified,
           createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
         },
       };
     } catch (error) {
@@ -328,9 +340,8 @@ export class AuthService {
     }
   }
 
-  async facebookOAuth(facebookOAuthDto: FacebookOAuthDto): Promise<AuthResponseDto> {
+  async facebookOAuth(facebookOAuthDto: FacebookOAuthDto) {
     const { accessToken: fbAccessToken } = facebookOAuthDto;
-    console.log("facebookOAuth___", fbAccessToken);
 
     try {
       // Verify Facebook access token
@@ -406,14 +417,16 @@ export class AuthService {
       return {
         accessToken: jwtAccessToken,
         refreshToken,
-        csrfToken: crypto.randomBytes(64).toString('hex'),
+        expiresIn: 7200, // 2 hours
         user: {
           id: user._id.toString(),
-          name: user.name,
           email: user.email,
-          role: user.role,
+          name: user.name,
           avatar: user.avatar,
+          role: user.role,
+          isEmailVerified: user.isVerified,
           createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
         },
       };
     } catch (error) {

@@ -1,8 +1,9 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, GoogleOAuthDto, FacebookOAuthDto, LogoutDto } from './dto';
+import { RegisterDto, LoginDto, AuthResponseDto, RefreshTokenDto, GoogleOAuthDto, FacebookOAuthDto, LogoutDto, LogoutResponseDto, ProfileResponseDto } from './dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { TransformResponseDTO } from '../../shared/decorators';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -10,108 +11,113 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Đăng ký tài khoản mới' })
+  @ApiOperation({ 
+    summary: 'Đăng ký tài khoản mới',
+    description: 'Tạo tài khoản người dùng mới với email và mật khẩu'
+  })
   @ApiResponse({ 
     status: 201, 
     description: 'Đăng ký thành công',
-    type: AuthResponseDto 
+    type: AuthResponseDto
   })
-  @ApiResponse({ 
-    status: 409, 
-    description: 'Email đã được sử dụng' 
-  })
-  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+  @TransformResponseDTO(AuthResponseDto)
+  async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Đăng nhập' })
+  @ApiOperation({ 
+    summary: 'Đăng nhập',
+    description: 'Xác thực người dùng bằng email và mật khẩu'
+  })
   @ApiResponse({ 
     status: 200, 
     description: 'Đăng nhập thành công',
-    type: AuthResponseDto 
+    type: AuthResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Email hoặc mật khẩu không chính xác' 
-  })
-  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
+  @TransformResponseDTO(AuthResponseDto)
+  async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Làm mới access token bằng refresh token' })
+  @ApiOperation({ 
+    summary: 'Làm mới access token',
+    description: 'Tạo access token mới bằng refresh token hợp lệ'
+  })
   @ApiResponse({ 
     status: 200, 
-    description: 'Token được làm mới thành công',
-    type: AuthResponseDto 
+    description: 'Làm mới token thành công',
+    type: AuthResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Refresh token không hợp lệ hoặc đã hết hạn' 
-  })
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto): Promise<AuthResponseDto> {
+  @TransformResponseDTO(AuthResponseDto)
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshToken(refreshTokenDto);
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Đăng xuất và vô hiệu hóa refresh token' })
+  @ApiOperation({ 
+    summary: 'Đăng xuất',
+    description: 'Vô hiệu hóa refresh token và đăng xuất người dùng'
+  })
   @ApiResponse({ 
     status: 200, 
-    description: 'Đăng xuất thành công' 
+    description: 'Đăng xuất thành công',
+    type: LogoutResponseDto
   })
+  @TransformResponseDTO(LogoutResponseDto)
   async logout(@Body() logoutDto: LogoutDto) {
-    await this.authService.logout(logoutDto.refreshToken);
-    return { message: 'Đăng xuất thành công' };
+    return this.authService.logout(logoutDto.refreshToken);
   }
 
   @Post('oauth/google')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Đăng nhập/Đăng ký bằng Google OAuth' })
+  @ApiOperation({ 
+    summary: 'Đăng nhập Google OAuth',
+    description: 'Đăng nhập hoặc đăng ký tài khoản bằng Google OAuth'
+  })
   @ApiResponse({ 
     status: 200, 
-    description: 'Đăng nhập Google thành công',
-    type: AuthResponseDto 
+    description: 'Đăng nhập Google OAuth thành công',
+    type: AuthResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Google ID token không hợp lệ' 
-  })
-  async googleOAuth(@Body() googleOAuthDto: GoogleOAuthDto): Promise<AuthResponseDto> {
+  @TransformResponseDTO(AuthResponseDto)
+  async googleOAuth(@Body() googleOAuthDto: GoogleOAuthDto) {
     return this.authService.googleOAuth(googleOAuthDto);
   }
 
   @Post('oauth/facebook')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Đăng nhập/Đăng ký bằng Facebook OAuth' })
+  @ApiOperation({ 
+    summary: 'Đăng nhập Facebook OAuth',
+    description: 'Đăng nhập hoặc đăng ký tài khoản bằng Facebook OAuth'
+  })
   @ApiResponse({ 
     status: 200, 
-    description: 'Đăng nhập Facebook thành công',
-    type: AuthResponseDto 
+    description: 'Đăng nhập Facebook OAuth thành công',
+    type: AuthResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Facebook access token không hợp lệ' 
-  })
-  async facebookOAuth(@Body() facebookOAuthDto: FacebookOAuthDto): Promise<AuthResponseDto> {
+  @TransformResponseDTO(AuthResponseDto)
+  async facebookOAuth(@Body() facebookOAuthDto: FacebookOAuthDto) {
     return this.authService.facebookOAuth(facebookOAuthDto);
   }
 
   @Get('profile')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Lấy thông tin profile của user hiện tại' })
+  @ApiOperation({ 
+    summary: 'Lấy thông tin profile',
+    description: 'Lấy thông tin profile của người dùng hiện tại'
+  })
   @ApiResponse({ 
     status: 200, 
-    description: 'Thông tin profile',
+    description: 'Thông tin profile người dùng',
+    type: ProfileResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Token không hợp lệ' 
-  })
+  @TransformResponseDTO(ProfileResponseDto)
   async getProfile(@Request() req) {
     return req.user;
   }

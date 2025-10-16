@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, IsArray, IsBoolean, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { MediaType, MediaProvider } from '../entities/media.entity';
+import { MediaType, MediaProvider } from '../../entities/media.entity';
 
 export class UploadMediaDto {
   @ApiProperty({

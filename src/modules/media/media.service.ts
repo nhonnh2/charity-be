@@ -131,7 +131,7 @@ export class MediaService {
     userId: string,
     file: Express.Multer.File,
     uploadDto: UploadMediaDto,
-  ): Promise<MediaDocument> {
+  ) {
     try {
       // Validate file
       this.validateFile(file, uploadDto.type);
@@ -273,7 +273,7 @@ export class MediaService {
     }
   }
 
-  async getMediaById(mediaId: string, userId?: string): Promise<MediaDocument> {
+  async getMediaById(mediaId: string, userId?: string) {
     const query: any = { _id: mediaId };
     
     // If userId provided, ensure user owns the media or media is public
@@ -299,13 +299,7 @@ export class MediaService {
     return media;
   }
 
-  async getMediaList(queryDto: QueryMediaDto, userId?: string): Promise<{
-    data: MediaDocument[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }> {
+  async getMediaList(queryDto: QueryMediaDto, userId?: string) {
     const { page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = queryDto;
     const skip = (page - 1) * limit;
 
@@ -360,7 +354,7 @@ export class MediaService {
     mediaId: string,
     updateDto: UpdateMediaDto,
     userId: string,
-  ): Promise<MediaDocument> {
+  ) {
     const media = await this.mediaModel.findOne({
       _id: mediaId,
       userId: new Types.ObjectId(userId),
@@ -384,7 +378,7 @@ export class MediaService {
     return media;
   }
 
-  async deleteMedia(mediaId: string, userId: string): Promise<boolean> {
+  async deleteMedia(mediaId: string, userId: string) {
     const media = await this.mediaModel.findOne({
       _id: mediaId,
       userId: new Types.ObjectId(userId),
@@ -415,7 +409,7 @@ export class MediaService {
       await media.save();
 
       this.logger.log(`Media deleted successfully: ${mediaId}`);
-      return true;
+      return { message: 'Media deleted successfully' };
     } catch (error) {
       this.logger.error(`Failed to delete media ${mediaId}:`, error);
       throw error;
@@ -426,6 +420,17 @@ export class MediaService {
     const media = await this.getMediaById(mediaId, userId);
     const cloudService = this.getCloudService(media.provider);
     return cloudService.getSignedUrl(media.cloudPath, expiresIn);
+  }
+
+  async downloadMedia(mediaId: string, userId?: string, expiresIn: number = 3600) {
+    const media = await this.getMediaById(mediaId, userId);
+    const cloudService = this.getCloudService(media.provider);
+    const downloadUrl = await cloudService.getSignedUrl(media.cloudPath, expiresIn);
+    
+    // Increment download count
+    await this.mediaModel.findByIdAndUpdate(mediaId, { $inc: { downloadCount: 1 } });
+    
+    return { downloadUrl };
   }
 
   async incrementDownloadCount(mediaId: string): Promise<void> {

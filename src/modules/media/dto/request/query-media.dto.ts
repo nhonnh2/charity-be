@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, IsNumber, Min, Max, IsArray } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { MediaType, MediaProvider, MediaStatus } from '../entities/media.entity';
+import { MediaType, MediaProvider, MediaStatus } from '../../entities/media.entity';
 
 export class QueryMediaDto {
   @ApiProperty({

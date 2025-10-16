@@ -1,7 +1,7 @@
 import { IsOptional, IsEnum, IsString, IsNumber, Min, Max, IsDateString, IsBoolean } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { CampaignType, FundingType, CampaignStatus, CampaignCategory } from '../../../shared/enums';
+import { CampaignType, FundingType, CampaignStatus, CampaignCategory } from '../../../../shared/enums';
 
 export class QueryCampaignsDto {
   @ApiPropertyOptional({
@@ -155,4 +155,22 @@ export class QueryCampaignsDto {
   @IsOptional()
   @IsString()
   tag?: string;
-} 
+
+  @ApiPropertyOptional({
+    description: 'Lọc chiến dịch chờ duyệt (dành cho reviewer)',
+    example: true
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  pendingReview?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Lọc chiến dịch đã follow bởi user hiện tại',
+    example: true
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  followedBy?: boolean;
+}

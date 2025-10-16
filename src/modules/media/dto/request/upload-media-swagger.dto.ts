@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MediaType, MediaProvider } from '../entities/media.entity';
+import { MediaType, MediaProvider } from '../../entities/media.entity';
 
 export class UploadMediaSwaggerDto {
   @ApiProperty({

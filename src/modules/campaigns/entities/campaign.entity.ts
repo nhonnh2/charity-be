@@ -142,6 +142,9 @@ export class Campaign extends Document {
   @Prop({ type: Number, default: 0 })
   shareCount: number;
 
+  @Prop({ type: Number, default: 0 })
+  interestedCount: number; // Số người quan tâm/follow chiến dịch
+
   @Prop({ type: Object, required: false })
   coverImage?: FileObject; // Ảnh bìa đại diện cho chiến dịch
 

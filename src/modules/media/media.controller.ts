@@ -16,12 +16,14 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBearerAuth, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth, ApiParam, ApiQuery, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { MediaService } from './media.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { UploadMediaDto, UploadMediaSwaggerDto, QueryMediaDto, UpdateMediaDto, MediaResponseDto, MediaListResponseDto } from './dto';
+import { UploadMediaDto, UploadMediaSwaggerDto, QueryMediaDto, UpdateMediaDto } from './dto';
+import { MediaDetailResponseDto, MediaListResponseDto, DeleteMediaResponseDto, DownloadUrlResponseDto } from './dto/response';
 import { MediaProvider } from './entities/media.entity';
+import { TransformResponseDTO } from '../../shared/decorators';
 
 @ApiTags('Media')
 @Controller('media')
@@ -32,179 +34,136 @@ export class MediaController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload media file' })
+  @ApiOperation({ 
+    summary: 'Upload media file',
+    description: 'Upload file media với metadata và xử lý tự động'
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     type: UploadMediaSwaggerDto,
     description: 'Media file upload with metadata',
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'File uploaded successfully',
-    type: MediaResponseDto 
+    type: MediaDetailResponseDto
   })
-  @ApiResponse({ 
-    status: 400, 
-    description: 'Invalid file or file size exceeds limit' 
-  })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
-  })
+  @TransformResponseDTO(MediaDetailResponseDto)
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body() uploadDto: UploadMediaDto,
     @Request() req: any,
-  ): Promise<MediaResponseDto> {
+  ) {
     if (!file) {
       throw new Error('No file uploaded');
     }
 
-    const result = await this.mediaService.uploadFile(
+    return this.mediaService.uploadFile(
       req.user.sub,
       file,
       uploadDto,
     );
-
-    return this.mapToResponseDto(result);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get media list' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({ 
+    summary: 'Get media list',
+    description: 'Lấy danh sách media với phân trang và bộ lọc'
+  })
+  @ApiResponse({
+    status: 200,
     description: 'Media list retrieved successfully',
-    type: MediaListResponseDto 
+    type: MediaListResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
-  })
+  @TransformResponseDTO(MediaListResponseDto)
   async getMediaList(
     @Query() queryDto: QueryMediaDto,
     @Request() req: any,
-  ): Promise<MediaListResponseDto> {
-    const result = await this.mediaService.getMediaList(queryDto, req.user.sub);
-    
-    return {
-      data: result.data.map(media => this.mapToResponseDto(media)),
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: result.totalPages,
-    };
+  ) {
+    return this.mediaService.getMediaList(queryDto, req.user.sub);
   }
 
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get media by ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Media retrieved successfully',
-    type: MediaResponseDto 
+  @ApiOperation({ 
+    summary: 'Get media by ID',
+    description: 'Lấy thông tin chi tiết media theo ID'
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Media not found' 
+  @ApiResponse({
+    status: 200,
+    description: 'Media details retrieved successfully',
+    type: MediaDetailResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
-  })
+  @TransformResponseDTO(MediaDetailResponseDto)
   async getMediaById(
     @Param('id') id: string,
     @Request() req: any,
-  ): Promise<MediaResponseDto> {
-    const media = await this.mediaService.getMediaById(id, req.user.sub);
-    return this.mapToResponseDto(media);
+  ) {
+    return this.mediaService.getMediaById(id, req.user.sub);
   }
 
 
   @Put(':id')
-  @ApiOperation({ summary: 'Update media metadata' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({ 
+    summary: 'Update media metadata',
+    description: 'Cập nhật metadata của media file'
+  })
+  @ApiResponse({
+    status: 200,
     description: 'Media updated successfully',
-    type: MediaResponseDto 
+    type: MediaDetailResponseDto
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Media not found or access denied' 
-  })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
-  })
+  @TransformResponseDTO(MediaDetailResponseDto)
   async updateMedia(
     @Param('id') id: string,
     @Body() updateDto: UpdateMediaDto,
     @Request() req: any,
-  ): Promise<MediaResponseDto> {
-    const media = await this.mediaService.updateMedia(id, updateDto, req.user.sub);
-    return this.mapToResponseDto(media);
+  ) {
+    return this.mediaService.updateMedia(id, updateDto, req.user.sub);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete media file' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Media deleted successfully' 
+  @ApiOperation({ 
+    summary: 'Delete media file',
+    description: 'Xóa media file và metadata'
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Media not found or access denied' 
+  @ApiResponse({
+    status: 200,
+    description: 'Media deleted successfully',
+    type: DeleteMediaResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
-  })
+  @TransformResponseDTO(DeleteMediaResponseDto)
   async deleteMedia(
     @Param('id') id: string,
     @Request() req: any,
-  ): Promise<{ message: string }> {
-    await this.mediaService.deleteMedia(id, req.user.sub);
-    return { message: 'Media deleted successfully' };
+  ) {
+    return this.mediaService.deleteMedia(id, req.user.sub);
   }
 
   @Get(':id/download')
-  @ApiOperation({ summary: 'Get download URL' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Download URL generated successfully' 
+  @ApiOperation({ 
+    summary: 'Get download URL',
+    description: 'Tạo signed URL để download media file'
   })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Media not found or access denied' 
+  @ApiResponse({
+    status: 200,
+    description: 'Download URL generated successfully',
+    type: DownloadUrlResponseDto
   })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
-  })
+  @TransformResponseDTO(DownloadUrlResponseDto)
   async downloadMedia(
     @Param('id') id: string,
     @Query('expires', new ParseIntPipe({ optional: true })) expires: number = 3600,
     @Request() req: any,
-  ): Promise<{ downloadUrl: string }> {
-    const downloadUrl = await this.mediaService.getSignedUrl(id, req.user.sub, expires);
-    await this.mediaService.incrementDownloadCount(id);
-    
-    return { downloadUrl };
+  ) {
+    return this.mediaService.downloadMedia(id, req.user.sub, expires);
   }
 
 
   @Get(':id/view')
-  @ApiOperation({ summary: 'View media file' })
-  @ApiResponse({ 
-    status: 302, 
-    description: 'Redirect to media file URL' 
-  })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Media not found or access denied' 
-  })
-  @ApiResponse({ 
-    status: 401, 
-    description: 'Unauthorized' 
+  @ApiOperation({ 
+    summary: 'View media file',
+    description: 'Redirect đến URL của media file để xem trực tiếp'
   })
   async viewMedia(
     @Param('id') id: string,
@@ -216,32 +175,6 @@ export class MediaController {
   }
 
 
-  private mapToResponseDto(media: any): MediaResponseDto {
-    return {
-      id: media._id.toString(),
-      originalName: media.originalName,
-      filename: media.filename,
-      mimetype: media.mimetype,
-      size: media.size,
-      type: media.type,
-      provider: media.provider,
-      url: media.url,
-      cloudPath: media.cloudPath,
-      status: media.status,
-      thumbnailUrl: media.thumbnailUrl,
-      metadata: media.metadata,
-      tags: media.tags,
-      isPublic: media.isPublic,
-      description: media.description,
-      altText: media.altText,
-      downloadCount: media.downloadCount,
-      viewCount: media.viewCount,
-      uploadedAt: media.uploadedAt,
-      processedAt: media.processedAt,
-      createdAt: media.createdAt,
-      updatedAt: media.updatedAt,
-    };
-  }
 }
 
 

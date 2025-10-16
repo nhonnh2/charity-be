@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString, IsArray, IsBoolean, MaxLength } from 'class-validator';
-import { MediaType } from '../entities/media.entity';
+import { MediaType } from '../../entities/media.entity';
 
 export class UpdateMediaDto {
   @ApiProperty({

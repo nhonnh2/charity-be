@@ -2,9 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from './entities/user.entity';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { QueryUsersDto } from './dto/query-users.dto';
+import { CreateUserDto } from './dto/request/create-user.dto';
+import { UpdateUserDto } from './dto/request/update-user.dto';
+import { QueryUsersDto } from './dto/request/query-users.dto';
 import { DatabaseService } from '@shared/services/database.service';
 import { UtilsService } from '@shared/services/utils.service';
 
@@ -16,7 +16,7 @@ export class UsersService {
     private readonly utilsService: UtilsService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto) {
     const createdUser = new this.userModel(createUserDto);
     const savedUser = await createdUser.save();
     
@@ -40,7 +40,7 @@ export class UsersService {
     );
   }
 
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string) {
     const user = await this.userModel.findById(id).exec();
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -49,7 +49,7 @@ export class UsersService {
     return this.utilsService.removeSensitiveData(user.toObject());
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: string, updateUserDto: UpdateUserDto) {
     const updatedUser = await this.userModel
       .findByIdAndUpdate(id, updateUserDto, { new: true })
       .exec();
@@ -61,11 +61,12 @@ export class UsersService {
     return this.utilsService.removeSensitiveData(updatedUser.toObject());
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string) {
     const result = await this.userModel.findByIdAndDelete(id).exec();
     if (!result) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
+    return { message: 'Người dùng đã được xóa thành công' };
   }
 
   async findByEmail(email: string): Promise<User | null> {

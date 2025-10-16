@@ -1,35 +1,10 @@
 import { IsString, IsNotEmpty, IsEnum, IsNumber, IsOptional, IsArray, IsDateString, Min, Max, MaxLength, ValidateIf, IsUUID } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CampaignType, FundingType, CampaignCategory } from '../../../shared/enums';
+import { CampaignType, FundingType, CampaignCategory } from '../../../../shared/enums';
+import { FileDto } from '../../../../shared/dto/common/file.dto';
 
-export class FileObjectDto {
-  @ApiProperty({
-    description: 'ID của file trong collection media',
-    example: '507f1f77bcf86cd799439011'
-  })
-  @IsString()
-  @IsNotEmpty()
-  id: string;
-
-  @ApiProperty({
-    description: 'URL của file',
-    example: 'https://example.com/files/document.pdf'
-  })
-  @IsString()
-  @IsNotEmpty()
-  url: string;
-
-  @ApiProperty({
-    description: 'Tên file',
-    example: 'document.pdf'
-  })
-  @IsString()
-  @IsNotEmpty()
-  name: string;
-}
-
-export class MilestoneDto {
+export class MilestoneRequestDto {
   @ApiProperty({
     description: 'Tiêu đề giai đoạn',
     example: 'Giai đoạn 1: Xây dựng cơ sở hạ tầng',
@@ -59,7 +34,6 @@ export class MilestoneDto {
   @Min(1000)
   budget: number;
 
-
   @ApiProperty({
     description: 'Thời gian dự kiến (số ngày)',
     example: 30,
@@ -72,23 +46,13 @@ export class MilestoneDto {
   durationDays: number;
 
   @ApiPropertyOptional({
-    description: 'Trạng thái giai đoạn',
-    enum: ['pending', 'in_progress', 'completed'],
-    example: 'pending'
-  })
-  @IsOptional()
-  @IsString()
-  status?: 'pending' | 'in_progress' | 'completed';
-
-
-  @ApiPropertyOptional({
     description: 'Tài liệu kế hoạch cho giai đoạn',
-    type: [FileObjectDto]
+    type: [FileDto]
   })
   @IsOptional()
   @IsArray()
-  @Type(() => FileObjectDto)
-  documents?: FileObjectDto[];
+  @Type(() => FileDto)
+  documents?: FileDto[];
 }
 
 export class CreateCampaignDto {
@@ -199,29 +163,29 @@ export class CreateCampaignDto {
 
   @ApiPropertyOptional({
     description: 'Các giai đoạn thực hiện chiến dịch',
-    type: [MilestoneDto]
+    type: [MilestoneRequestDto]
   })
   @IsOptional()
   @IsArray()
-  @Type(() => MilestoneDto)
-  milestones?: MilestoneDto[];
+  @Type(() => MilestoneRequestDto)
+  milestones?: MilestoneRequestDto[];
 
   @ApiPropertyOptional({
     description: 'Ảnh bìa đại diện cho chiến dịch',
-    type: FileObjectDto
+    type: FileDto
   })
   @IsOptional()
-  @Type(() => FileObjectDto)
-  coverImage?: FileObjectDto;
+  @Type(() => FileDto)
+  coverImage?: FileDto;
 
   @ApiPropertyOptional({
     description: 'Danh sách ảnh của chiến dịch',
-    type: [FileObjectDto]
+    type: [FileDto]
   })
   @IsOptional()
   @IsArray()
-  @Type(() => FileObjectDto)
-  gallery?: FileObjectDto[];
+  @Type(() => FileDto)
+  gallery?: FileDto[];
 
   // Validation cho emergency campaign - chỉ validate khi type là EMERGENCY
   @ValidateIf(o => o.type === CampaignType.EMERGENCY)
@@ -235,4 +199,4 @@ export class CreateCampaignDto {
 
   @Transform(({ value }) => value?.trim())
   description_transformed?: string;
-} 
+}

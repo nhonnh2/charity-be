@@ -2,15 +2,17 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Campaign } from './entities/campaign.entity';
+import { CampaignFollow } from './entities/campaign-follow.entity';
 import { User } from '../users/entities/user.entity';
-import { CreateCampaignDto, UpdateCampaignDto, QueryCampaignsDto } from './dto';
-import { CampaignType, CampaignStatus, ReviewStatus, CampaignErrorCode, CampaignCategory } from '../../shared/enums';
+import { CreateCampaignDto, UpdateCampaignDto, QueryCampaignsDto, FollowCampaignDto, UnfollowCampaignDto, CampaignFollowResponseDto, CampaignFollowersQueryDto } from './dto';
+import { CampaignType, CampaignStatus, ReviewStatus, CampaignErrorCode, CommonErrorCode } from '../../shared/enums';
 import { BusinessException } from '../../core/exceptions';
 
 @Injectable()
 export class CampaignsService {
   constructor(
     @InjectModel(Campaign.name) private campaignModel: Model<Campaign>,
+    @InjectModel(CampaignFollow.name) private campaignFollowModel: Model<CampaignFollow>,
     @InjectModel(User.name) private userModel: Model<User>,
   ) {}
 
@@ -132,44 +134,15 @@ export class CampaignsService {
       this.campaignModel.countDocuments(query)
     ]);
 
-    // Transform campaigns to list format with calculated metrics
-    const transformedCampaigns = campaigns.map(campaign => {
-      // Calculate completed milestones
-      const completedMilestones = campaign.milestones?.filter(m => m.status === 'completed').length || 0;
-      const totalMilestones = campaign.milestones?.length || 0;
-      
-      // Calculate spent amount (sum of actualSpending from completed milestones)
-      const spentAmount = campaign.milestones?.reduce((sum, milestone) => {
-        return sum + (milestone.actualSpending || 0);
-      }, 0) || 0;
-
-      return {
-        _id: campaign._id,
-        title: campaign.title,
-        description: campaign.description,
-        coverImage: campaign.coverImage,
-        status: campaign.status,
-        category: campaign.category,
-        interestedCount: campaign.donorCount || 0, // Using donorCount as interested people
-        donatedAmount: campaign.currentAmount || 0,
-        completedMilestones,
-        totalMilestones,
-        spentAmount,
-        createdAt: campaign.createdAt,
-        startDate: campaign.startDate,
-        endDate: campaign.endDate,
-        viewCount: campaign.viewCount || 0,
-        isFeatured: campaign.isFeatured || false
-      };
-    });
-
     return {
-      items: transformedCampaigns,
+      items: campaigns,
       pagination: {
         current: page,
         pageSize: limit,
         total,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1
       }
     };
   }
@@ -438,5 +411,250 @@ export class CampaignsService {
       .limit(limit)
       .populate('creatorId', 'name email reputation')
       .exec();
+  }
+
+  // ========================================
+  // CAMPAIGN FOLLOW/UNFOLLOW METHODS
+  // ========================================
+
+  async followCampaign(campaignId: string, userId: string, followDto?: FollowCampaignDto): Promise<CampaignFollow> {
+    // Validate campaign exists
+    const campaign = await this.campaignModel.findById(campaignId);
+    if (!campaign) {
+      throw new BusinessException(
+        CampaignErrorCode.NOT_FOUND,
+        `Campaign with ID ${campaignId} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Validate user exists
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new BusinessException(
+        CampaignErrorCode.CREATOR_NOT_FOUND,
+        `User with ID ${userId} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Check if user is already following
+    const existingFollow = await this.campaignFollowModel.findOne({
+      campaignId: new Types.ObjectId(campaignId),
+      userId: new Types.ObjectId(userId),
+      isActive: true
+    });
+
+    if (existingFollow) {
+      throw new BusinessException(
+        CommonErrorCode.BAD_REQUEST,
+        'User is already following this campaign',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Create follow record
+    const followData = {
+      campaignId: new Types.ObjectId(campaignId),
+      userId: new Types.ObjectId(userId),
+      userName: user.name,
+      campaignTitle: campaign.title,
+      isActive: true,
+      followedAt: new Date()
+    };
+
+    const campaignFollow = new this.campaignFollowModel(followData);
+    await campaignFollow.save();
+
+    // Update campaign interested count
+    await this.campaignModel.findByIdAndUpdate(
+      campaignId,
+      { $inc: { interestedCount: 1 } }
+    );
+
+    // Get updated count
+    const updatedCampaign = await this.campaignModel.findById(campaignId);
+    
+    return campaignFollow;
+  }
+
+  async unfollowCampaign(campaignId: string, userId: string, unfollowDto?: UnfollowCampaignDto): Promise<{ message: string }> {
+    // Validate campaign exists
+    const campaign = await this.campaignModel.findById(campaignId);
+    if (!campaign) {
+      throw new BusinessException(
+        CampaignErrorCode.NOT_FOUND,
+        `Campaign with ID ${campaignId} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Validate user exists
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new BusinessException(
+        CampaignErrorCode.CREATOR_NOT_FOUND,
+        `User with ID ${userId} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Find existing follow
+    const existingFollow = await this.campaignFollowModel.findOne({
+      campaignId: new Types.ObjectId(campaignId),
+      userId: new Types.ObjectId(userId),
+      isActive: true
+    });
+
+    if (!existingFollow) {
+      throw new BusinessException(
+        CommonErrorCode.BAD_REQUEST,
+        'User is not following this campaign',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Soft delete follow record
+    await this.campaignFollowModel.findByIdAndUpdate(
+      existingFollow._id,
+      { isActive: false }
+    );
+
+    // Update campaign interested count
+    await this.campaignModel.findByIdAndUpdate(
+      campaignId,
+      { $inc: { interestedCount: -1 } }
+    );
+
+    // Get updated count
+    const updatedCampaign = await this.campaignModel.findById(campaignId);
+    
+    return { message: 'Đã bỏ theo dõi chiến dịch thành công' };
+  }
+
+  async getCampaignFollowers(campaignId: string, queryDto: CampaignFollowersQueryDto): Promise<{
+    data: CampaignFollow[];
+    pagination: {
+      current: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page = 1, limit = 20, sortBy = 'followedAt', sortOrder = 'desc' } = queryDto;
+    
+    // Validate campaign exists
+    const campaign = await this.campaignModel.findById(campaignId);
+    if (!campaign) {
+      throw new BusinessException(
+        CampaignErrorCode.NOT_FOUND,
+        `Campaign with ID ${campaignId} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Build query
+    const query = {
+      campaignId: new Types.ObjectId(campaignId),
+      isActive: true
+    };
+
+    // Build sort
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query with pagination
+    const skip = (page - 1) * limit;
+    const [followers, total] = await Promise.all([
+      this.campaignFollowModel
+        .find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.campaignFollowModel.countDocuments(query)
+    ]);
+
+    return {
+      data: followers,
+      pagination: {
+        current: page,
+        pageSize: limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1
+      }
+    };
+  }
+
+  async getUserFollowedCampaigns(userId: string, queryDto: CampaignFollowersQueryDto): Promise<{
+    data: CampaignFollow[];
+    pagination: {
+      current: number;
+      pageSize: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page = 1, limit = 20, sortBy = 'followedAt', sortOrder = 'desc' } = queryDto;
+    
+    // Validate user exists
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new BusinessException(
+        CampaignErrorCode.CREATOR_NOT_FOUND,
+        `User with ID ${userId} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Build query
+    const query = {
+      userId: new Types.ObjectId(userId),
+      isActive: true
+    };
+
+    // Build sort
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query with pagination
+    const skip = (page - 1) * limit;
+    const [follows, total] = await Promise.all([
+      this.campaignFollowModel
+        .find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.campaignFollowModel.countDocuments(query)
+    ]);
+
+    return {
+      data: follows,
+      pagination: {
+        current: page,
+        pageSize: limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1
+      }
+    };
+  }
+
+  async checkUserFollowStatus(campaignId: string, userId: string): Promise<CampaignFollow | null> {
+    const follow = await this.campaignFollowModel.findOne({
+      campaignId: new Types.ObjectId(campaignId),
+      userId: new Types.ObjectId(userId),
+      isActive: true
+    });
+
+    return follow;
   }
 } 
