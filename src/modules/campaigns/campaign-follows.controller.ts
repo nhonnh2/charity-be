@@ -60,10 +60,10 @@ export class CampaignFollowsController {
   })
   @TransformResponseDTO(UnfollowResponseDto)
   async unfollowCampaign(
-    @Param('id') id: string,
+    @Param('campaignId') campaignId: string,
     @Request() req: any
   ) {
-    return this.campaignsService.unfollowCampaign(id, req.user.id);
+    return this.campaignsService.unfollowCampaign(campaignId, req.user.id);
   }
 
   @Get('my-followed')
@@ -85,7 +85,7 @@ export class CampaignFollowsController {
     return this.campaignsService.getUserFollowedCampaigns(req.user.id, query);
   }
 
-  @Get('campaign/:campaignId/followers')
+  @Get(':campaignId/followers')
   @ApiOperation({ 
     summary: 'Lấy danh sách người theo dõi chiến dịch',
     description: 'Lấy danh sách người dùng đang theo dõi một chiến dịch cụ thể'
@@ -103,7 +103,7 @@ export class CampaignFollowsController {
     return this.campaignsService.getCampaignFollowers(campaignId, query);
   }
 
-  @Get('campaign/:campaignId/status')
+  @Get(':campaignId/status')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: 'Kiểm tra trạng thái theo dõi',
@@ -114,11 +114,11 @@ export class CampaignFollowsController {
     description: 'Trạng thái theo dõi của người dùng',
     type: FollowStatusResponseDto
   })
-  @TransformResponseDTO(FollowStatusResponseDto)
   async getFollowStatus(
     @Param('campaignId') campaignId: string,
     @Request() req: any
   ) {
     return this.campaignsService.checkUserFollowStatus(campaignId, req.user.id);
   }
+
 }

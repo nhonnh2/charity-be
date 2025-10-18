@@ -25,6 +25,7 @@ import { CommonErrorCode } from '../../shared/enums/error-codes.enum';
  *   errors?: any[]           // For validation errors
  * }
  */
+// mục đích của global exception filter là bắt lỗi được throw ra để respponse về client phải không
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);

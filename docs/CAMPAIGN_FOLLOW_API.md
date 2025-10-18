@@ -15,7 +15,7 @@ interface CampaignFollow {
   userId: ObjectId; // Reference to User
   userName: string; // Denormalized for performance
   campaignTitle: string; // Denormalized for performance
-  isActive: boolean; // Soft delete flag
+  isFollowing: boolean; // Soft delete flag
   followedAt: Date; // When user started following
   createdAt: Date;
   updatedAt: Date;
@@ -27,7 +27,7 @@ interface CampaignFollow {
 ```typescript
 interface Campaign {
   // ... existing fields ...
-  interestedCount: number; // Số người quan tâm/follow chiến dịch
+  followersCount: number; // Số người quan tâm/follow chiến dịch
 }
 ```
 
@@ -59,7 +59,7 @@ interface Campaign {
     "userId": "64f8b9c123456789abcdef02",
     "userName": "Nguyễn Văn A",
     "followedAt": "2024-01-15T10:00:00Z",
-    "interestedCount": 126,
+    "followersCount": 126,
     "isFollowing": true
   }
 }
@@ -96,7 +96,7 @@ interface Campaign {
     "userId": "64f8b9c123456789abcdef02",
     "userName": "Nguyễn Văn A",
     "followedAt": "2024-01-15T10:00:00Z",
-    "interestedCount": 125,
+    "followersCount": 125,
     "isFollowing": false
   }
 }
@@ -133,7 +133,7 @@ interface Campaign {
       "userName": "Nguyễn Văn A",
       "campaignTitle": "Hỗ trợ học bổng cho trẻ em vùng sâu",
       "followedAt": "2024-01-15T10:00:00Z",
-      "isActive": true
+      "isFollowing": true
     }
   ],
   "pagination": {
@@ -166,7 +166,7 @@ interface Campaign {
       "userName": "Nguyễn Văn A",
       "campaignTitle": "Hỗ trợ học bổng cho trẻ em vùng sâu",
       "followedAt": "2024-01-15T10:00:00Z",
-      "isActive": true
+      "isFollowing": true
     }
   ],
   "pagination": {
@@ -202,8 +202,8 @@ interface Campaign {
 ### Follow/Unfollow Rules
 
 1. **Unique Constraint**: Mỗi user chỉ có thể follow một campaign một lần
-2. **Soft Delete**: Khi unfollow, record được đánh dấu `isActive: false` thay vì xóa
-3. **Auto Count Update**: `interestedCount` trong Campaign được tự động cập nhật
+2. **Soft Delete**: Khi unfollow, record được đánh dấu `isFollowing: false` thay vì xóa
+3. **Auto Count Update**: `followersCount` trong Campaign được tự động cập nhật
 4. **Denormalized Data**: Lưu `userName` và `campaignTitle` để tránh populate
 
 ### Performance Optimizations
@@ -211,15 +211,15 @@ interface Campaign {
 1. **Compound Index**: `{ campaignId: 1, userId: 1 }` với unique constraint
 2. **Denormalization**: Lưu tên user và campaign để tránh join
 3. **Pagination**: Tất cả list endpoints đều có pagination
-4. **Soft Delete**: Sử dụng `isActive` flag thay vì hard delete
+4. **Soft Delete**: Sử dụng `isFollowing` flag thay vì hard delete
 
 ## 📊 Database Indexes
 
 ```javascript
 // MongoDB indexes for performance
 db.campaignfollows.createIndex({ campaignId: 1, userId: 1 }, { unique: true });
-db.campaignfollows.createIndex({ campaignId: 1, isActive: 1 });
-db.campaignfollows.createIndex({ userId: 1, isActive: 1 });
+db.campaignfollows.createIndex({ campaignId: 1, isFollowing: 1 });
+db.campaignfollows.createIndex({ userId: 1, isFollowing: 1 });
 db.campaignfollows.createIndex({ followedAt: -1 });
 ```
 
@@ -316,12 +316,12 @@ const CampaignFollowButton = ({ campaignId, initialFollowStatus }) => {
 Khi hiển thị danh sách campaigns, có thể include thông tin follow:
 
 ```typescript
-// Campaign list response now includes interestedCount
+// Campaign list response now includes followersCount
 interface CampaignListItem {
   _id: string;
   title: string;
   description: string;
-  interestedCount: number; // Số người quan tâm
+  followersCount: number; // Số người quan tâm
   currentAmount: number;
   donorCount: number;
   // ... other fields

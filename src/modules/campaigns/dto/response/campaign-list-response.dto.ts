@@ -62,7 +62,7 @@ export class CampaignListItemDto {
     example: 45
   })
   @Expose()
-  interestedCount: number;
+  followersCount: number;
 
   @ApiProperty({
     description: 'Số tiền đã quyên góp (VND)',

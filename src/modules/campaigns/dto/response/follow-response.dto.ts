@@ -50,7 +50,7 @@ export class CampaignFollowResponseDto {
     example: 125
   })
   @Expose()
-  interestedCount: number;
+  followersCount: number;
 
   @ApiProperty({ 
     description: 'Trạng thái follow',

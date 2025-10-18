@@ -319,7 +319,7 @@ interface Campaign {
   approvedAt?: Date;
   completedAt?: Date;
   rejectionReason?: string;
-  isActive: boolean;
+  isFollowing: boolean;
   isFeatured: boolean;
   viewCount: number;
   shareCount: number;

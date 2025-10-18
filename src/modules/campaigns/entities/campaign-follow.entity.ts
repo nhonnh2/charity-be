@@ -16,7 +16,7 @@ export class CampaignFollow extends Document {
   campaignTitle: string; // Denormalized để tránh populate
 
   @Prop({ type: Boolean, default: true })
-  isActive: boolean; // Có thể dùng để soft delete
+  isFollowing: boolean; // Có thể dùng để soft delete
 
   @Prop({ type: Date, default: Date.now })
   followedAt: Date;
@@ -31,6 +31,6 @@ export const CampaignFollowSchema = SchemaFactory.createForClass(CampaignFollow)
 CampaignFollowSchema.index({ campaignId: 1, userId: 1 }, { unique: true });
 
 // Indexes cho performance
-CampaignFollowSchema.index({ campaignId: 1, isActive: 1 });
-CampaignFollowSchema.index({ userId: 1, isActive: 1 });
+CampaignFollowSchema.index({ campaignId: 1, isFollowing: 1 });
+CampaignFollowSchema.index({ userId: 1, isFollowing: 1 });
 CampaignFollowSchema.index({ followedAt: -1 });

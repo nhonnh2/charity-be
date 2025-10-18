@@ -1,6 +1,6 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Model, Types, Connection } from 'mongoose';
 import { Campaign } from './entities/campaign.entity';
 import { CampaignFollow } from './entities/campaign-follow.entity';
 import { User } from '../users/entities/user.entity';
@@ -14,6 +14,7 @@ export class CampaignsService {
     @InjectModel(Campaign.name) private campaignModel: Model<Campaign>,
     @InjectModel(CampaignFollow.name) private campaignFollowModel: Model<CampaignFollow>,
     @InjectModel(User.name) private userModel: Model<User>,
+    @InjectConnection() private connection: Connection,
   ) {}
 
   async create(createCampaignDto: CreateCampaignDto, userId: string): Promise<Campaign> {
@@ -418,122 +419,153 @@ export class CampaignsService {
   // ========================================
 
   async followCampaign(campaignId: string, userId: string, followDto?: FollowCampaignDto): Promise<CampaignFollow> {
-    // Validate campaign exists
-    const campaign = await this.campaignModel.findById(campaignId);
-    if (!campaign) {
-      throw new BusinessException(
-        CampaignErrorCode.NOT_FOUND,
-        `Campaign with ID ${campaignId} not found`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    // Validate user exists
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      throw new BusinessException(
-        CampaignErrorCode.CREATOR_NOT_FOUND,
-        `User with ID ${userId} not found`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    // Check if user is already following
-    const existingFollow = await this.campaignFollowModel.findOne({
-      campaignId: new Types.ObjectId(campaignId),
-      userId: new Types.ObjectId(userId),
-      isActive: true
-    });
-
-    if (existingFollow) {
-      throw new BusinessException(
-        CommonErrorCode.BAD_REQUEST,
-        'User is already following this campaign',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    // Create follow record
-    const followData = {
-      campaignId: new Types.ObjectId(campaignId),
-      userId: new Types.ObjectId(userId),
-      userName: user.name,
-      campaignTitle: campaign.title,
-      isActive: true,
-      followedAt: new Date()
-    };
-
-    const campaignFollow = new this.campaignFollowModel(followData);
-    await campaignFollow.save();
-
-    // Update campaign interested count
-    await this.campaignModel.findByIdAndUpdate(
-      campaignId,
-      { $inc: { interestedCount: 1 } }
-    );
-
-    // Get updated count
-    const updatedCampaign = await this.campaignModel.findById(campaignId);
+    const session = await this.connection.startSession();
     
-    return campaignFollow;
+    try {
+      let result: CampaignFollow;
+      await session.withTransaction(async () => {
+        // Validate campaign exists
+        const campaign = await this.campaignModel.findById(campaignId).session(session);
+        if (!campaign) {
+          throw new BusinessException(
+            CampaignErrorCode.NOT_FOUND,
+            `Campaign with ID ${campaignId} not found`,
+            HttpStatus.NOT_FOUND,
+          );
+        }
+
+        // Validate user exists
+        const user = await this.userModel.findById(userId).session(session);
+        if (!user) {
+          throw new BusinessException(
+            CampaignErrorCode.CREATOR_NOT_FOUND,
+            `User with ID ${userId} not found`,
+            HttpStatus.NOT_FOUND,
+          );
+        }
+
+        // Check if user has any follow record (active or inactive)
+        const existingFollow = await this.campaignFollowModel.findOne({
+          campaignId: new Types.ObjectId(campaignId),
+          userId: new Types.ObjectId(userId)
+        }).session(session);
+
+        let shouldIncrementFollowersCount = false;
+
+        if (existingFollow) {
+          if (existingFollow.isFollowing) {
+            throw new BusinessException(
+              CommonErrorCode.BAD_REQUEST,
+              'User is already following this campaign',
+              HttpStatus.BAD_REQUEST,
+            );
+          } else {
+            // Reactivate existing follow record
+            existingFollow.isFollowing = true;
+            existingFollow.followedAt = new Date();
+            existingFollow.userName = user.name; // Update in case user changed name
+            existingFollow.campaignTitle = campaign.title; // Update in case campaign changed title
+            result = await existingFollow.save({ session });
+            shouldIncrementFollowersCount = true; // Need to increment because it was inactive
+          }
+        } else {
+          // Create new follow record
+          const followData = {
+            campaignId: new Types.ObjectId(campaignId),
+            userId: new Types.ObjectId(userId),
+            userName: user.name,
+            campaignTitle: campaign.title,
+            isFollowing: true,
+            followedAt: new Date()
+          };
+
+          const campaignFollow = new this.campaignFollowModel(followData);
+          result = await campaignFollow.save({ session });
+          shouldIncrementFollowersCount = true; // New follow, need to increment
+        }
+
+        // Update campaign followers count only if needed
+        if (shouldIncrementFollowersCount) {
+          await this.campaignModel.findByIdAndUpdate(
+            campaignId,
+            { $inc: { followersCount: 1 } },
+            { session }
+          );
+        }
+      });
+      
+      return result!;
+    } finally {
+      await session.endSession();
+    }
   }
 
   async unfollowCampaign(campaignId: string, userId: string, unfollowDto?: UnfollowCampaignDto): Promise<{ message: string }> {
-    // Validate campaign exists
-    const campaign = await this.campaignModel.findById(campaignId);
-    if (!campaign) {
-      throw new BusinessException(
-        CampaignErrorCode.NOT_FOUND,
-        `Campaign with ID ${campaignId} not found`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    // Validate user exists
-    const user = await this.userModel.findById(userId);
-    if (!user) {
-      throw new BusinessException(
-        CampaignErrorCode.CREATOR_NOT_FOUND,
-        `User with ID ${userId} not found`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    // Find existing follow
-    const existingFollow = await this.campaignFollowModel.findOne({
-      campaignId: new Types.ObjectId(campaignId),
-      userId: new Types.ObjectId(userId),
-      isActive: true
-    });
-
-    if (!existingFollow) {
-      throw new BusinessException(
-        CommonErrorCode.BAD_REQUEST,
-        'User is not following this campaign',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    // Soft delete follow record
-    await this.campaignFollowModel.findByIdAndUpdate(
-      existingFollow._id,
-      { isActive: false }
-    );
-
-    // Update campaign interested count
-    await this.campaignModel.findByIdAndUpdate(
-      campaignId,
-      { $inc: { interestedCount: -1 } }
-    );
-
-    // Get updated count
-    const updatedCampaign = await this.campaignModel.findById(campaignId);
+    const session = await this.connection.startSession();
     
-    return { message: 'Đã bỏ theo dõi chiến dịch thành công' };
+    try {
+      let result: { message: string };
+      await session.withTransaction(async () => {
+        // Validate campaign exists
+        const campaign = await this.campaignModel.findById(campaignId).session(session);
+        if (!campaign) {
+          throw new BusinessException(
+            CampaignErrorCode.NOT_FOUND,
+            `Campaign with ID ${campaignId} not found`,
+            HttpStatus.NOT_FOUND,
+          );
+        }
+
+        // Validate user exists
+        const user = await this.userModel.findById(userId).session(session);
+        if (!user) {
+          throw new BusinessException(
+            CampaignErrorCode.CREATOR_NOT_FOUND,
+            `User with ID ${userId} not found`,
+            HttpStatus.NOT_FOUND,
+          );
+        }
+
+        // Find existing active follow
+        const existingFollow = await this.campaignFollowModel.findOne({
+          campaignId: new Types.ObjectId(campaignId),
+          userId: new Types.ObjectId(userId),
+          isFollowing: true
+        }).session(session);
+
+        if (!existingFollow) {
+          throw new BusinessException(
+            CommonErrorCode.BAD_REQUEST,
+            'User is not following this campaign',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+
+        // Soft delete follow record
+        await this.campaignFollowModel.findByIdAndUpdate(
+          existingFollow._id,
+          { isFollowing: false },
+          { session }
+        );
+
+        // Update campaign followers count (only if currently active)
+        await this.campaignModel.findByIdAndUpdate(
+          campaignId,
+          { $inc: { followersCount: -1 } },
+          { session }
+        );
+        
+        result = { message: 'Đã bỏ theo dõi chiến dịch thành công' };
+      });
+      
+      return result!;
+    } finally {
+      await session.endSession();
+    }
   }
 
   async getCampaignFollowers(campaignId: string, queryDto: CampaignFollowersQueryDto): Promise<{
-    data: CampaignFollow[];
+    items: CampaignFollow[];
     pagination: {
       current: number;
       pageSize: number;
@@ -558,7 +590,7 @@ export class CampaignsService {
     // Build query
     const query = {
       campaignId: new Types.ObjectId(campaignId),
-      isActive: true
+      isFollowing: true
     };
 
     // Build sort
@@ -578,7 +610,7 @@ export class CampaignsService {
     ]);
 
     return {
-      data: followers,
+      items: followers,
       pagination: {
         current: page,
         pageSize: limit,
@@ -591,7 +623,7 @@ export class CampaignsService {
   }
 
   async getUserFollowedCampaigns(userId: string, queryDto: CampaignFollowersQueryDto): Promise<{
-    data: CampaignFollow[];
+    items: CampaignFollow[];
     pagination: {
       current: number;
       pageSize: number;
@@ -616,7 +648,7 @@ export class CampaignsService {
     // Build query
     const query = {
       userId: new Types.ObjectId(userId),
-      isActive: true
+      isFollowing: true
     };
 
     // Build sort
@@ -636,7 +668,7 @@ export class CampaignsService {
     ]);
 
     return {
-      data: follows,
+      items: follows,
       pagination: {
         current: page,
         pageSize: limit,
@@ -648,13 +680,22 @@ export class CampaignsService {
     };
   }
 
-  async checkUserFollowStatus(campaignId: string, userId: string): Promise<CampaignFollow | null> {
+  async checkUserFollowStatus(campaignId: string, userId: string): Promise<{ isFollowing: boolean; followedAt?: Date }> {
     const follow = await this.campaignFollowModel.findOne({
       campaignId: new Types.ObjectId(campaignId),
       userId: new Types.ObjectId(userId),
-      isActive: true
+      isFollowing: true
     });
 
-    return follow;
+    if (follow) {
+      return {
+        isFollowing: true,
+        followedAt: follow.followedAt
+      };
+    }
+
+    return {
+      isFollowing: false
+    };
   }
 } 

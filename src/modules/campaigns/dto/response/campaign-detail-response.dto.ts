@@ -88,7 +88,7 @@ export class CampaignDetailResponseDto {
 
   @ApiProperty({ description: 'Số lượt quan tâm' })
   @Expose()
-  interestedCount: number;
+  followersCount: number;
 
   @ApiProperty({ description: 'Số lượt chia sẻ' })
   @Expose()

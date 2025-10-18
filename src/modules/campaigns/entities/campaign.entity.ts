@@ -131,7 +131,7 @@ export class Campaign extends Document {
   rejectionReason?: string;
 
   @Prop({ type: Boolean, default: true })
-  isActive: boolean;
+  isFollowing: boolean;
 
   @Prop({ type: Boolean, default: false })
   isFeatured: boolean;
@@ -143,7 +143,7 @@ export class Campaign extends Document {
   shareCount: number;
 
   @Prop({ type: Number, default: 0 })
-  interestedCount: number; // Số người quan tâm/follow chiến dịch
+  followersCount: number; // Số người quan tâm/follow chiến dịch
 
   @Prop({ type: Object, required: false })
   coverImage?: FileObject; // Ảnh bìa đại diện cho chiến dịch
