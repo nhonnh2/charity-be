@@ -17,7 +17,8 @@ import {
   UpdateCampaignDto, 
   QueryCampaignsDto,
   CampaignDetailResponseDto,
-  CampaignListResponseDto
+  CampaignListResponseDto,
+  CampaignListItemDto
 } from './dto';
 import { TransformResponseDTO } from '../../shared/decorators';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -58,7 +59,7 @@ export class CampaignsController {
     description: 'Danh sách chiến dịch',
     type: CampaignListResponseDto
   })
-  @TransformResponseDTO(CampaignListResponseDto)
+  @TransformResponseDTO(CampaignListItemDto)
   async findAll(@Query() query: QueryCampaignsDto) {
     return this.campaignsService.findAll(query);
   }

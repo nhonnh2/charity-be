@@ -47,7 +47,7 @@ export class CampaignFollowsController {
     return this.campaignsService.followCampaign(followCampaignDto.campaignId, req.user.id);
   }
 
-  @Delete(':id')
+  @Delete(':campaignId')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: 'Bỏ theo dõi chiến dịch',

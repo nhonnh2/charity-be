@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Transform, Type } from 'class-transformer';
 import { CampaignStatus } from '@shared/enums';
 import { CreatorDto } from '@shared/dto/common/creator.dto';
-import { AttachmentDto } from '@shared/dto/common/file.dto';
+import { AttachmentDto,FileDto } from '@shared/dto/common/file.dto';
 import { MilestoneResponseDto } from './milestone-response.dto';
 import { ReviewResponseDto } from './review-response.dto';
 
@@ -64,18 +64,21 @@ export class CampaignDetailResponseDto {
 
   @ApiProperty({ description: 'Hình ảnh chính' })
   @Expose()
-  @Transform(({ obj }) => obj.mainImage || null)
-  mainImage: string | null;
+  @Transform(({ obj }) => obj.coverImage ? {
+    id: obj.coverImage._id?.toString() || obj.coverImage.id,
+    url: obj.coverImage.url,
+    name: obj.coverImage.name
+  } : undefined)
+  coverImage: FileDto;
 
-  @ApiProperty({ description: 'Hình ảnh bổ sung', type: [AttachmentDto] })
+  @ApiProperty({ description: 'Hình ảnh bổ sung', type: [FileDto] })
   @Expose()
-  @Type(() => AttachmentDto)
-  images: AttachmentDto[];
-
-  @ApiProperty({ description: 'Tài liệu đính kèm', type: [AttachmentDto] })
-  @Expose()
-  @Type(() => AttachmentDto)
-  attachments: AttachmentDto[];
+  @Transform(({ obj }) => obj.gallery?.map(item => ({
+    id: item._id?.toString() || item.id,
+    url: item.url,
+    name: item.name
+  })))
+  gallery: FileDto[];
 
   @ApiProperty({ description: 'Thông tin người tạo', type: CreatorDto })
   @Expose()

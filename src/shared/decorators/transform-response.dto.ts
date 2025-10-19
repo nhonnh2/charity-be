@@ -1,16 +1,22 @@
-import { Transform } from 'class-transformer';
-import { plainToClass } from 'class-transformer';
+import { SetMetadata } from '@nestjs/common';
+import { RESPONSE_DTO_KEY } from '../../core/interceptors/transform.interceptor';
 
+/**
+ * Decorator để chỉ định DTO class cho response transformation
+ * Được sử dụng cùng với TransformInterceptor để tự động transform response
+ * theo DTO class đã chỉ định
+ * 
+ * @param dtoClass - Class của DTO để transform response
+ * 
+ * @example
+ * ```typescript
+ * @Get()
+ * @TransformResponseDTO(CampaignDetailResponseDto)
+ * async findOne(@Param('id') id: string) {
+ *   return this.campaignsService.findOne(id);
+ * }
+ * ```
+ */
 export function TransformResponseDTO<T>(dtoClass: new () => T) {
-  return Transform(({ value }) => {
-    if (!value) return value;
-    
-    // Nếu là array (pagination)
-    if (Array.isArray(value)) {
-      return value.map(item => plainToClass(dtoClass, item, { excludeExtraneousValues: true }));
-    }
-    
-    // Nếu là single object
-    return plainToClass(dtoClass, value, { excludeExtraneousValues: true });
-  });
+  return SetMetadata(RESPONSE_DTO_KEY, dtoClass);
 }

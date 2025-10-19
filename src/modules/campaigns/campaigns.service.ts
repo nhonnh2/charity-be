@@ -35,7 +35,12 @@ export class CampaignsService {
     const campaignData: any = {
       ...createCampaignDto,
       creatorId: new Types.ObjectId(userId),
-      creatorName: creator.name,
+      creator: {
+        name: creator.name,
+        email: creator.email,
+        avatar: creator.avatar,
+        reputation: creator.reputation || 0
+      },
       status: CampaignStatus.PENDING_REVIEW,
     };
 
@@ -127,7 +132,6 @@ export class CampaignsService {
     const [campaigns, total] = await Promise.all([
       this.campaignModel
         .find(query)
-        .select('_id title description coverImage status category currentAmount donorCount milestones startDate endDate viewCount isFeatured createdAt')
         .sort(sort)
         .skip(skip)
         .limit(limit)
@@ -159,7 +163,6 @@ export class CampaignsService {
 
     const campaign = await this.campaignModel
       .findById(id)
-      .populate('creatorId', 'name email reputation avatar')
       .exec();
 
     if (!campaign) {

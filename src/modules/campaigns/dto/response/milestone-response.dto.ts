@@ -27,26 +27,11 @@ export class MilestoneResponseDto {
   description: string;
 
   @ApiProperty({
-    description: 'Số tiền mục tiêu cho giai đoạn (VND)',
-    example: 50000000
-  })
-  @Expose()
-  targetAmount: number;
-
-  @ApiProperty({
-    description: 'Số tiền hiện tại đã quyên góp cho giai đoạn (VND)',
+    description: 'Ngân sách của giai đoạn',
     example: 45000000
   })
   @Expose()
-  currentAmount: number;
-
-  @ApiProperty({
-    description: 'Ngày hoàn thành dự kiến (được set sau khi campaign được approve)',
-    example: '2024-12-31T23:59:59.000Z',
-    required: false
-  })
-  @Expose()
-  dueDate?: Date;
+  budget: number;
 
   @ApiProperty({
     description: 'Thời gian dự kiến (số ngày)',

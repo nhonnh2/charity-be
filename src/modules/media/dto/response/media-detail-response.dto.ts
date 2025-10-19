@@ -1,34 +1,41 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Expose, Transform } from 'class-transformer';
 
 export class MediaDetailResponseDto {
   @ApiProperty({
     description: 'ID của media',
     example: '507f1f77bcf86cd799439011'
   })
+  @Expose()
+  @Transform(({ obj }) => obj._id?.toString() || obj.id)
   id: string;
 
   @ApiProperty({
     description: 'Tên file gốc',
     example: 'image.jpg'
   })
+  @Expose()
   originalName: string;
 
   @ApiProperty({
     description: 'Tên file đã được xử lý',
     example: '507f1f77bcf86cd799439011_image.jpg'
   })
+  @Expose()
   filename: string;
 
   @ApiProperty({
     description: 'MIME type của file',
     example: 'image/jpeg'
   })
+  @Expose()
   mimetype: string;
 
   @ApiProperty({
     description: 'Kích thước file (bytes)',
     example: 1024000
   })
+  @Expose()
   size: number;
 
   @ApiProperty({
@@ -36,6 +43,7 @@ export class MediaDetailResponseDto {
     example: 'IMAGE',
     enum: ['IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT']
   })
+  @Expose()
   type: string;
 
   @ApiProperty({
@@ -43,18 +51,21 @@ export class MediaDetailResponseDto {
     example: 'AZURE_BLOB',
     enum: ['GOOGLE_CLOUD', 'AZURE_BLOB']
   })
+  @Expose()
   provider: string;
 
   @ApiProperty({
     description: 'URL truy cập file',
     example: 'https://storage.example.com/media/image.jpg'
   })
+  @Expose()
   url: string;
 
   @ApiProperty({
     description: 'Đường dẫn trên cloud storage',
     example: 'media/AZURE_BLOB/images/2024/01/01/507f1f77bcf86cd799439011_image.jpg'
   })
+  @Expose()
   cloudPath: string;
 
   @ApiProperty({
@@ -62,6 +73,7 @@ export class MediaDetailResponseDto {
     example: 'READY',
     enum: ['UPLOADING', 'READY', 'FAILED', 'DELETED']
   })
+  @Expose()
   status: string;
 
   @ApiProperty({
@@ -69,6 +81,7 @@ export class MediaDetailResponseDto {
     example: 'https://storage.example.com/media/thumb_image.jpg',
     required: false
   })
+  @Expose()
   thumbnailUrl?: string;
 
   @ApiProperty({
@@ -82,6 +95,7 @@ export class MediaDetailResponseDto {
       quality: { type: 'string', example: 'original' }
     }
   })
+  @Expose()
   metadata?: {
     width?: number;
     height?: number;
@@ -94,12 +108,14 @@ export class MediaDetailResponseDto {
     type: [String],
     example: ['nature', 'landscape']
   })
+  @Expose()
   tags: string[];
 
   @ApiProperty({
     description: 'File có public không',
     example: false
   })
+  @Expose()
   isPublic: boolean;
 
   @ApiProperty({
@@ -107,6 +123,7 @@ export class MediaDetailResponseDto {
     example: 'Ảnh phong cảnh đẹp',
     required: false
   })
+  @Expose()
   description?: string;
 
   @ApiProperty({
@@ -114,24 +131,28 @@ export class MediaDetailResponseDto {
     example: 'Mô tả hình ảnh',
     required: false
   })
+  @Expose()
   altText?: string;
 
   @ApiProperty({
     description: 'Số lần download',
     example: 10
   })
+  @Expose()
   downloadCount: number;
 
   @ApiProperty({
     description: 'Số lần xem',
     example: 25
   })
+  @Expose()
   viewCount: number;
 
   @ApiProperty({
     description: 'Ngày upload',
     example: '2024-01-01T00:00:00.000Z'
   })
+  @Expose()
   uploadedAt: Date;
 
   @ApiProperty({
@@ -139,17 +160,20 @@ export class MediaDetailResponseDto {
     example: '2024-01-01T00:00:00.000Z',
     required: false
   })
+  @Expose()
   processedAt?: Date;
 
   @ApiProperty({
     description: 'Ngày tạo',
     example: '2024-01-01T00:00:00.000Z'
   })
+  @Expose()
   createdAt: Date;
 
   @ApiProperty({
     description: 'Ngày cập nhật',
     example: '2024-01-01T00:00:00.000Z'
   })
+  @Expose()
   updatedAt: Date;
 }

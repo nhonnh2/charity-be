@@ -78,8 +78,21 @@ export class Campaign extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   creatorId: Types.ObjectId;
 
-  @Prop({ required: true, trim: true })
-  creatorName: string;
+  @Prop({ 
+    type: {
+      name: { type: String, required: true, trim: true },
+      email: { type: String, required: true, trim: true },
+      avatar: { type: String, required: false, trim: true },
+      reputation: { type: Number, default: 0, min: 0 }
+    },
+    required: true
+  })
+  creator: {
+    name: string;
+    email: string;
+    avatar?: string;
+    reputation: number;
+  };
 
   @Prop({ type: Number, required: true, min: 1000 })
   targetAmount: number;
@@ -103,8 +116,6 @@ export class Campaign extends Document {
   @Prop({ type: [String], default: [] })
   tags: string[];
 
-  @Prop({ type: [Object], default: [] })
-  attachments: Attachment[];
 
   @Prop({ type: [Object], default: [] })
   milestones: Milestone[];

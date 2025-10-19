@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose, Transform } from 'class-transformer';
+import { Expose, Transform, Type } from 'class-transformer';
 import { CampaignStatus, CampaignCategory } from '../../../../shared/enums';
 import { FileDto } from '../../../../shared/dto/common/file.dto';
+import { CreatorDto } from '../../../../shared/dto/common/creator.dto';
 import { PaginatedResponseDto } from '../../../../shared/dto/common/pagination.dto';
 
 export class CampaignListItemDto {
@@ -58,39 +59,32 @@ export class CampaignListItemDto {
   category?: CampaignCategory;
 
   @ApiProperty({
-    description: 'Số người quan tâm (interested people)',
+    description: 'Số người đã quyên góp',
     example: 45
   })
   @Expose()
-  followersCount: number;
+  donorCount: number;
+
+  @ApiProperty({
+    description: 'Số người quan tâm (followers)',
+    example: 125,
+    required: false
+  })
+  @Expose()
+  followersCount?: number;
 
   @ApiProperty({
     description: 'Số tiền đã quyên góp (VND)',
     example: 60000000
   })
   @Expose()
-  donatedAmount: number;
+  currentAmount: number;
 
   @ApiProperty({
-    description: 'Số giai đoạn đã hoàn thành',
-    example: 2
+    description: 'Danh sách các giai đoạn',
+    type: 'array',
+    example: []
   })
-  @Expose()
-  completedMilestones: number;
-
-  @ApiProperty({
-    description: 'Tổng số giai đoạn',
-    example: 3
-  })
-  @Expose()
-  totalMilestones: number;
-
-  @ApiProperty({
-    description: 'Số tiền đã chi tiêu (VND)',
-    example: 80000000
-  })
-  @Expose()
-  spentAmount: number;
 
   @ApiProperty({
     description: 'Ngày tạo',
@@ -128,6 +122,11 @@ export class CampaignListItemDto {
   })
   @Expose()
   isFeatured: boolean;
+
+  @ApiProperty({ description: 'Thông tin người tạo', type: CreatorDto })
+  @Expose()
+  @Type(() => CreatorDto)
+  creator: CreatorDto;
 }
 
 export class CampaignListResponseDto extends PaginatedResponseDto<CampaignListItemDto> {

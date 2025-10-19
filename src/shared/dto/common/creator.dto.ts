@@ -18,4 +18,8 @@ export class CreatorDto {
   @ApiProperty({ description: 'Ảnh đại diện' })
   @Expose()
   avatar: string;
+
+  @ApiProperty({ description: 'Điểm uy tín của người tạo' })
+  @Expose()
+  reputation: number;
 }
