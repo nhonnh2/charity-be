@@ -120,6 +120,39 @@ export enum ReviewErrorCode {
   FEE_PAYMENT_FAILED = 'REVIEW_FEE_PAYMENT_FAILED',
 }
 
+// ========================================
+// POSTS/SOCIAL FEED ERRORS (POST_*)
+// ========================================
+export enum PostErrorCode {
+  // Not found / Access
+  NOT_FOUND = 'POST_NOT_FOUND',
+  NOT_OWNER = 'POST_NOT_OWNER',
+  
+  // Content validation
+  CONTENT_REQUIRED = 'POST_CONTENT_REQUIRED',
+  CONTENT_TOO_LONG = 'POST_CONTENT_TOO_LONG',
+  INVALID_MEDIA_TYPE = 'POST_INVALID_MEDIA_TYPE',
+  
+  // Interaction errors
+  ALREADY_LIKED = 'POST_ALREADY_LIKED',
+  NOT_LIKED = 'POST_NOT_LIKED',
+  ALREADY_SHARED = 'POST_ALREADY_SHARED',
+  COMMENT_NOT_FOUND = 'POST_COMMENT_NOT_FOUND',
+  
+  // Permission errors
+  CANNOT_EDIT = 'POST_CANNOT_EDIT',
+  CANNOT_DELETE = 'POST_CANNOT_DELETE',
+  PRIVATE_POST = 'POST_PRIVATE_POST',
+  
+  // Rate limiting
+  POST_LIMIT_EXCEEDED = 'POST_POST_LIMIT_EXCEEDED',
+  INTERACTION_LIMIT_EXCEEDED = 'POST_INTERACTION_LIMIT_EXCEEDED',
+  
+  // Campaign integration
+  CAMPAIGN_NOT_FOUND = 'POST_CAMPAIGN_NOT_FOUND',
+  CAMPAIGN_NOT_ACTIVE = 'POST_CAMPAIGN_NOT_ACTIVE',
+}
+
 // Union type of all error codes for type safety
 export type ErrorCode =
   | CommonErrorCode
@@ -129,4 +162,5 @@ export type ErrorCode =
   | UserErrorCode
   | PaymentErrorCode
   | DonationErrorCode
-  | ReviewErrorCode;
+  | ReviewErrorCode
+  | PostErrorCode;

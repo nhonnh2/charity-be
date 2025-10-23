@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Transform, Type } from 'class-transformer';
 import { CampaignStatus } from '@shared/enums';
 import { CreatorDto } from '@shared/dto/common/creator.dto';
-import { AttachmentDto,FileDto } from '@shared/dto/common/file.dto';
+import { FileDto } from '@shared/dto/common/file.dto';
 import { MilestoneResponseDto } from './milestone-response.dto';
 import { ReviewResponseDto } from './review-response.dto';
 

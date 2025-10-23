@@ -9,8 +9,16 @@ import {
   Query,
   UseGuards,
   Request,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { 
+  ApiTags, 
+  ApiBearerAuth, 
+  ApiOperation, 
+  ApiResponse, 
+  ApiParam,
+  ApiQuery 
+} from '@nestjs/swagger';
 import { CampaignsService } from './campaigns.service';
 import { 
   CreateCampaignDto, 
@@ -25,13 +33,13 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CampaignStatus } from '../../shared/enums';
 
 @ApiTags('Campaigns')
-@ApiBearerAuth()
 @Controller('campaigns')
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ 
     summary: 'Tạo chiến dịch mới',
     description: 'Tạo một chiến dịch quyên góp mới. Yêu cầu xác thực.'
@@ -81,6 +89,7 @@ export class CampaignsController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ 
     summary: 'Cập nhật chiến dịch',
     description: 'Cập nhật thông tin chiến dịch. Chỉ chủ sở hữu mới có thể cập nhật.'
@@ -101,6 +110,7 @@ export class CampaignsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ 
     summary: 'Xóa chiến dịch',
     description: 'Xóa chiến dịch. Chỉ chủ sở hữu mới có thể xóa.'
@@ -115,6 +125,7 @@ export class CampaignsController {
 
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ 
     summary: 'Cập nhật trạng thái chiến dịch',
     description: 'Cập nhật trạng thái của chiến dịch (ACTIVE, PAUSED, COMPLETED, CANCELLED)'

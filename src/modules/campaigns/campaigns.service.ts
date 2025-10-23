@@ -1,12 +1,13 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { InjectModel, InjectConnection } from '@nestjs/mongoose';
-import { Model, Types, Connection } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 import { Campaign } from './entities/campaign.entity';
 import { CampaignFollow } from './entities/campaign-follow.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateCampaignDto, UpdateCampaignDto, QueryCampaignsDto, FollowCampaignDto, UnfollowCampaignDto, CampaignFollowResponseDto, CampaignFollowersQueryDto } from './dto';
 import { CampaignType, CampaignStatus, ReviewStatus, CampaignErrorCode, CommonErrorCode } from '../../shared/enums';
 import { BusinessException } from '../../core/exceptions';
+import { DatabaseTransactionService } from '../../shared/services/database-transaction.service';
 
 @Injectable()
 export class CampaignsService {
@@ -14,7 +15,7 @@ export class CampaignsService {
     @InjectModel(Campaign.name) private campaignModel: Model<Campaign>,
     @InjectModel(CampaignFollow.name) private campaignFollowModel: Model<CampaignFollow>,
     @InjectModel(User.name) private userModel: Model<User>,
-    @InjectConnection() private connection: Connection,
+    private databaseTransactionService: DatabaseTransactionService,
   ) {}
 
   async create(createCampaignDto: CreateCampaignDto, userId: string): Promise<Campaign> {
@@ -422,11 +423,7 @@ export class CampaignsService {
   // ========================================
 
   async followCampaign(campaignId: string, userId: string, followDto?: FollowCampaignDto): Promise<CampaignFollow> {
-    const session = await this.connection.startSession();
-    
-    try {
-      let result: CampaignFollow;
-      await session.withTransaction(async () => {
+    return await this.databaseTransactionService.withTransaction(async (session) => {
         // Validate campaign exists
         const campaign = await this.campaignModel.findById(campaignId).session(session);
         if (!campaign) {
@@ -454,6 +451,7 @@ export class CampaignsService {
         }).session(session);
 
         let shouldIncrementFollowersCount = false;
+        let result: CampaignFollow;
 
         if (existingFollow) {
           if (existingFollow.isFollowing) {
@@ -495,20 +493,13 @@ export class CampaignsService {
             { session }
           );
         }
+
+        return result;
       });
-      
-      return result!;
-    } finally {
-      await session.endSession();
-    }
   }
 
   async unfollowCampaign(campaignId: string, userId: string, unfollowDto?: UnfollowCampaignDto): Promise<{ message: string }> {
-    const session = await this.connection.startSession();
-    
-    try {
-      let result: { message: string };
-      await session.withTransaction(async () => {
+    return await this.databaseTransactionService.withTransaction(async (session) => {
         // Validate campaign exists
         const campaign = await this.campaignModel.findById(campaignId).session(session);
         if (!campaign) {
@@ -558,13 +549,8 @@ export class CampaignsService {
           { session }
         );
         
-        result = { message: 'Đã bỏ theo dõi chiến dịch thành công' };
+        return { message: 'Đã bỏ theo dõi chiến dịch thành công' };
       });
-      
-      return result!;
-    } finally {
-      await session.endSession();
-    }
   }
 
   async getCampaignFollowers(campaignId: string, queryDto: CampaignFollowersQueryDto): Promise<{

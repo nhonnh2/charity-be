@@ -26,16 +26,6 @@ export interface FileObject {
   url: string;   // URL của file
   name: string;   // Tên file
 }
-
-// Interface cho attachment (backward compatibility)
-export interface Attachment {
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  fileSize: number;
-  uploadedAt: Date;
-}
-
 // Interface cho review
 export interface Review {
   reviewerId: Types.ObjectId;

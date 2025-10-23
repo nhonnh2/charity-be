@@ -6,7 +6,6 @@ import { CampaignType, FundingType, CampaignStatus, CampaignCategory } from '../
 export class QueryCampaignsDto {
   @ApiPropertyOptional({
     description: 'Số trang',
-    example: 1,
     minimum: 1,
     default: 1
   })
@@ -18,7 +17,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Số lượng items per page',
-    example: 10,
     minimum: 1,
     maximum: 100,
     default: 10
@@ -32,7 +30,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Tìm kiếm theo title, description, creator',
-    example: 'trường học'
   })
   @IsOptional()
   @IsString()
@@ -41,7 +38,6 @@ export class QueryCampaignsDto {
   @ApiPropertyOptional({
     description: 'Loại chiến dịch',
     enum: CampaignType,
-    example: CampaignType.NORMAL
   })
   @IsOptional()
   @IsEnum(CampaignType)
@@ -50,7 +46,6 @@ export class QueryCampaignsDto {
   @ApiPropertyOptional({
     description: 'Loại quyên góp',
     enum: FundingType,
-    example: FundingType.FIXED
   })
   @IsOptional()
   @IsEnum(FundingType)
@@ -59,7 +54,6 @@ export class QueryCampaignsDto {
   @ApiPropertyOptional({
     description: 'Trạng thái chiến dịch',
     enum: CampaignStatus,
-    example: CampaignStatus.ACTIVE
   })
   @IsOptional()
   @IsEnum(CampaignStatus)
@@ -68,7 +62,6 @@ export class QueryCampaignsDto {
   @ApiPropertyOptional({
     description: 'Danh mục chiến dịch (keyword)',
     enum: CampaignCategory,
-    example: CampaignCategory.EDUCATION
   })
   @IsOptional()
   @IsEnum(CampaignCategory)
@@ -76,7 +69,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'ID của người tạo chiến dịch',
-    example: '507f1f77bcf86cd799439011'
   })
   @IsOptional()
   @IsString()
@@ -84,7 +76,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Số tiền mục tiêu tối thiểu (VND)',
-    example: 1000000,
     minimum: 0
   })
   @IsOptional()
@@ -95,7 +86,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Số tiền mục tiêu tối đa (VND)',
-    example: 100000000,
     minimum: 0
   })
   @IsOptional()
@@ -106,7 +96,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Ngày bắt đầu từ',
-    example: '2024-01-01T00:00:00.000Z'
   })
   @IsOptional()
   @IsDateString()
@@ -114,7 +103,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Ngày bắt đầu đến',
-    example: '2024-12-31T23:59:59.000Z'
   })
   @IsOptional()
   @IsDateString()
@@ -122,7 +110,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Lọc chiến dịch nổi bật',
-    example: true
   })
   @IsOptional()
   @Transform(({ value }) => value === 'true')
@@ -131,7 +118,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Trường để sắp xếp',
-    example: 'createdAt',
     default: 'createdAt'
   })
   @IsOptional()
@@ -141,7 +127,6 @@ export class QueryCampaignsDto {
   @ApiPropertyOptional({
     description: 'Thứ tự sắp xếp',
     enum: ['asc', 'desc'],
-    example: 'desc',
     default: 'desc'
   })
   @IsOptional()
@@ -150,7 +135,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Tag để lọc',
-    example: 'trẻ em'
   })
   @IsOptional()
   @IsString()
@@ -158,7 +142,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Lọc chiến dịch chờ duyệt (dành cho reviewer)',
-    example: true
   })
   @IsOptional()
   @Transform(({ value }) => value === 'true')
@@ -167,7 +150,6 @@ export class QueryCampaignsDto {
 
   @ApiPropertyOptional({
     description: 'Lọc chiến dịch đã follow bởi user hiện tại',
-    example: true
   })
   @IsOptional()
   @Transform(({ value }) => value === 'true')

@@ -83,7 +83,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      expiresIn: 7200, // 2 hours
+      csrfToken:crypto.randomBytes(64).toString('hex'),
       user: {
         id: savedUser._id.toString(),
         email: savedUser.email,
@@ -156,7 +156,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      expiresIn: 7200, // 2 hours
+      csrfToken:crypto.randomBytes(64).toString('hex'),
       user: {
         id: user._id.toString(),
         email: user.email,
@@ -211,7 +211,7 @@ export class AuthService {
     return {
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
-      expiresIn: 7200, // 2 hours
+      csrfToken:crypto.randomBytes(64).toString('hex'),
       user: {
         id: user._id.toString(),
         email: user.email,
@@ -315,7 +315,7 @@ export class AuthService {
       return {
         accessToken,
         refreshToken,
-        expiresIn: 7200, // 2 hours
+        csrfToken:crypto.randomBytes(64).toString('hex'),
         user: {
           id: user._id.toString(),
           email: user.email,
@@ -417,7 +417,7 @@ export class AuthService {
       return {
         accessToken: jwtAccessToken,
         refreshToken,
-        expiresIn: 7200, // 2 hours
+        csrfToken:crypto.randomBytes(64).toString('hex'),
         user: {
           id: user._id.toString(),
           email: user.email,

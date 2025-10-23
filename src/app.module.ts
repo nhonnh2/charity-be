@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { MediaModule } from './modules/media/media.module';
+import { PostsModule } from './modules/posts/posts.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -29,6 +30,7 @@ import { AppService } from './app.service';
     AuthModule,
     CampaignsModule,
     MediaModule,
+    PostsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

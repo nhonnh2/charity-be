@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { UtilsService } from './services/utils.service';
 import { DatabaseService } from './services/database.service';
+import { DatabaseTransactionService } from './services/database-transaction.service';
 import { FileUploadService } from './services/file-upload.service';
 import { GoogleCloudStorageService } from './services/google-cloud-storage.service';
 import { AzureBlobStorageService } from './services/azure-blob-storage.service';
@@ -11,6 +12,7 @@ import { MediaProcessorService } from './services/media-processor.service';
   providers: [
     UtilsService,
     DatabaseService,
+    DatabaseTransactionService,
     FileUploadService,
     GoogleCloudStorageService,
     AzureBlobStorageService,
@@ -19,6 +21,7 @@ import { MediaProcessorService } from './services/media-processor.service';
   exports: [
     UtilsService,
     DatabaseService,
+    DatabaseTransactionService,
     FileUploadService,
     GoogleCloudStorageService,
     AzureBlobStorageService,
