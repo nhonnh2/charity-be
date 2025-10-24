@@ -6,22 +6,18 @@ import { PostErrorCode } from '@/shared/enums/error-codes.enum';
 import { DatabaseService } from '@/shared/services/database.service';
 import { DatabaseTransactionService } from '@/shared/services/database-transaction.service';
 import { Post, PostDocument } from './entities/post.entity';
-import { PostInteraction, PostInteractionDocument } from './entities/post-interaction.entity';
 import { User } from '../users/entities/user.entity';
 import { 
   CreatePostDto, 
   UpdatePostDto, 
-  QueryPostsDto,
-  CreateInteractionDto 
+  QueryPostsDto
 } from './dto';
 import { PostType, PostVisibility } from './entities/post.entity';
-import { InteractionType } from './entities/post-interaction.entity';
 
 @Injectable()
 export class PostsService {
   constructor(
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
-    @InjectModel(PostInteraction.name) private interactionModel: Model<PostInteractionDocument>,
     @InjectModel(User.name) private userModel: Model<User>,
     private databaseService: DatabaseService,
     private databaseTransactionService: DatabaseTransactionService,
@@ -307,116 +303,6 @@ export class PostsService {
     await this.postModel.findByIdAndUpdate(id, { isDeleted: true });
   }
 
-  // ========================================
-  // INTERACTION OPERATIONS
-  // ========================================
-
-  async likePost(postId: string, userId: string): Promise<void> {
-    await this.databaseTransactionService.withTransaction(async (session) => {
-      await this.toggleInteraction(postId, userId, InteractionType.LIKE, session);
-    });
-  }
-
-  async unlikePost(postId: string, userId: string): Promise<void> {
-    await this.databaseTransactionService.withTransaction(async (session) => {
-      await this.removeInteraction(postId, userId, InteractionType.LIKE, session);
-    });
-  }
-
-  async commentPost(postId: string, userId: string, commentData: CreateInteractionDto['commentData']): Promise<PostInteraction> {
-    if (!commentData?.content) {
-      throw new BusinessException(
-        PostErrorCode.CONTENT_REQUIRED,
-        'Comment content is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    return await this.databaseTransactionService.withTransaction(async (session) => {
-      // Validate post exists
-      const post = await this.postModel.findById(postId).session(session);
-      if (!post || post.isDeleted) {
-        throw new BusinessException(
-          PostErrorCode.NOT_FOUND,
-          `Post with ID ${postId} not found`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      // Create comment
-      const comment = new this.interactionModel({
-        postId: new Types.ObjectId(postId),
-        userId: new Types.ObjectId(userId),
-        type: InteractionType.COMMENT,
-        commentData: {
-          content: commentData.content,
-          parentCommentId: commentData.parentCommentId ? new Types.ObjectId(commentData.parentCommentId) : undefined,
-          mentions: commentData.mentions?.map(id => new Types.ObjectId(id)),
-        },
-      });
-
-      const result = await comment.save({ session });
-
-      // Update post comments count
-      await this.postModel.findByIdAndUpdate(
-        postId, 
-        { $inc: { 'engagement.commentsCount': 1 } },
-        { session }
-      );
-
-      return result;
-    });
-  }
-
-  async sharePost(postId: string, userId: string, shareData: CreateInteractionDto['shareData']): Promise<void> {
-    await this.databaseTransactionService.withTransaction(async (session) => {
-      // Validate post exists
-      const post = await this.postModel.findById(postId).session(session);
-      if (!post || post.isDeleted) {
-        throw new BusinessException(
-          PostErrorCode.NOT_FOUND,
-          `Post with ID ${postId} not found`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      // Check if already shared
-      const existingShare = await this.interactionModel.findOne({
-        postId: new Types.ObjectId(postId),
-        userId: new Types.ObjectId(userId),
-        type: InteractionType.SHARE,
-      }).session(session);
-
-      if (existingShare) {
-        throw new BusinessException(
-          PostErrorCode.ALREADY_SHARED,
-          'You have already shared this post',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      // Create share
-      const share = new this.interactionModel({
-        postId: new Types.ObjectId(postId),
-        userId: new Types.ObjectId(userId),
-        type: InteractionType.SHARE,
-        shareData: {
-          shareText: shareData?.shareText,
-          shareType: shareData?.shareType || 'repost',
-          originalPostId: new Types.ObjectId(postId),
-        },
-      });
-
-      await share.save({ session });
-
-      // Update post shares count
-      await this.postModel.findByIdAndUpdate(
-        postId, 
-        { $inc: { 'engagement.sharesCount': 1 } },
-        { session }
-      );
-    });
-  }
 
   // ========================================
   // HELPER METHODS
@@ -440,62 +326,6 @@ export class PostsService {
     return PostType.TEXT;
   }
 
-  private async toggleInteraction(postId: string, userId: string, type: InteractionType, session?: ClientSession): Promise<void> {
-    const existingInteraction = await this.interactionModel.findOne({
-      postId: new Types.ObjectId(postId),
-      userId: new Types.ObjectId(userId),
-      type,
-    }).session(session);
-
-    if (existingInteraction) {
-      throw new BusinessException(
-        PostErrorCode.ALREADY_LIKED,
-        `You have already ${type}d this post`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    // Create interaction
-    const interaction = new this.interactionModel({
-      postId: new Types.ObjectId(postId),
-      userId: new Types.ObjectId(userId),
-      type,
-    });
-
-    await interaction.save({ session });
-
-    // Update post engagement count
-    const field = `${type}sCount`;
-    await this.postModel.findByIdAndUpdate(
-      postId, 
-      { $inc: { [`engagement.${field}`]: 1 } },
-      { session }
-    );
-  }
-
-  private async removeInteraction(postId: string, userId: string, type: InteractionType, session?: ClientSession): Promise<void> {
-    const interaction = await this.interactionModel.findOneAndDelete({
-      postId: new Types.ObjectId(postId),
-      userId: new Types.ObjectId(userId),
-      type,
-    }).session(session);
-
-    if (!interaction) {
-      throw new BusinessException(
-        PostErrorCode.NOT_LIKED,
-        `You have not ${type}d this post`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    // Update post engagement count
-    const field = `${type}sCount`;
-    await this.postModel.findByIdAndUpdate(
-      postId, 
-      { $inc: { [`engagement.${field}`]: -1 } },
-      { session }
-    );
-  }
 
   private async incrementViewCount(postId: string): Promise<void> {
     // View count increment doesn't need transaction as it's a simple atomic operation
@@ -505,22 +335,5 @@ export class PostsService {
     });
   }
 
-  private async isPostLiked(postId: string, userId: string): Promise<boolean> {
-    const interaction = await this.interactionModel.findOne({
-      postId: new Types.ObjectId(postId),
-      userId: new Types.ObjectId(userId),
-      type: InteractionType.LIKE,
-    });
-    return !!interaction;
-  }
-
-  private async isPostShared(postId: string, userId: string): Promise<boolean> {
-    const interaction = await this.interactionModel.findOne({
-      postId: new Types.ObjectId(postId),
-      userId: new Types.ObjectId(userId),
-      type: InteractionType.SHARE,
-    });
-    return !!interaction;
-  }
 
 }

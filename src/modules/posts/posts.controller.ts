@@ -17,10 +17,7 @@ import { PostsService } from './posts.service';
 import { 
   CreatePostDto, 
   UpdatePostDto, 
-  QueryPostsDto,
-  CreateInteractionDto,
-  CreateCommentDto,
-  CreateShareDto
+  QueryPostsDto
 } from './dto';
 import { 
   PostResponseDto, 
@@ -79,64 +76,6 @@ export class PostsController {
     return { message: 'Xóa bài viết thành công' };
   }
 
-  // ========================================
-  // INTERACTION ENDPOINTS
-  // ========================================
-
-  @Post(':id/like')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Thích bài viết' })
-  @ApiResponse({ status: 200, description: 'Thích bài viết thành công' })
-  async likePost(@Param('id') id: string, @Request() req) {
-    await this.postsService.likePost(id, req.user.id);
-    return { message: 'Thích bài viết thành công' };
-  }
-
-  @Delete(':id/like')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Bỏ thích bài viết' })
-  @ApiResponse({ status: 200, description: 'Bỏ thích bài viết thành công' })
-  async unlikePost(@Param('id') id: string, @Request() req) {
-    await this.postsService.unlikePost(id, req.user.id);
-    return { message: 'Bỏ thích bài viết thành công' };
-  }
-
-  @Post(':id/comment')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Bình luận bài viết' })
-  @ApiResponse({ status: 201, description: 'Thêm bình luận thành công' })
-  async commentPost(
-    @Param('id') id: string, 
-    @Body() commentData: CreateCommentDto, 
-    @Request() req
-  ) {
-    const comment = await this.postsService.commentPost(id, req.user.id, commentData);
-    return { 
-      message: 'Thêm bình luận thành công',
-      comment: {
-        id: comment._id,
-        content: comment.commentData?.content,
-        createdAt: comment.createdAt,
-      }
-    };
-  }
-
-  @Post(':id/share')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Chia sẻ bài viết' })
-  @ApiResponse({ status: 201, description: 'Chia sẻ bài viết thành công' })
-  async sharePost(
-    @Param('id') id: string, 
-    @Body() shareData: CreateShareDto, 
-    @Request() req
-  ) {
-    await this.postsService.sharePost(id, req.user.id, shareData);
-    return { message: 'Chia sẻ bài viết thành công' };
-  }
 
   // ========================================
   // FEED ENDPOINTS

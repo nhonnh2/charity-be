@@ -8,7 +8,6 @@ import {
   MaxLength,
   MinLength
 } from 'class-validator';
-import { InteractionType } from '../../entities/post-interaction.entity';
 
 export class CreateCommentDto {
   @ApiProperty({ 
@@ -60,26 +59,3 @@ export class CreateShareDto {
   shareType: 'repost' | 'quote';
 }
 
-export class CreateInteractionDto {
-  @ApiProperty({ 
-    description: 'Type of interaction',
-    enum: InteractionType,
-    example: InteractionType.LIKE
-  })
-  @IsEnum(InteractionType)
-  type: InteractionType;
-
-  @ApiPropertyOptional({ 
-    description: 'Comment data if type is comment',
-    type: CreateCommentDto
-  })
-  @IsOptional()
-  commentData?: CreateCommentDto;
-
-  @ApiPropertyOptional({ 
-    description: 'Share data if type is share',
-    type: CreateShareDto
-  })
-  @IsOptional()
-  shareData?: CreateShareDto;
-}
